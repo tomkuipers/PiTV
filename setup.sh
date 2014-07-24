@@ -67,6 +67,14 @@ echo "============================================================"
 echo ""
 
 echo ""
+echo "Removing old X11 software... (This could take a while)"
+echo ""
+
+echo "============================================================"
+apt-get autoremove `sudo dpkg --get-selections | grep -v "deinstall" | grep x11 | sed s/install//`
+echo "============================================================"
+
+echo ""
 echo "Installing necessary dependencies... (This could take a while)"
 echo ""
 
@@ -87,7 +95,7 @@ then
   exit 0
 fi
 
-apt-get install matchbox chromium x11-xserver-utils ttf-mscorefonts-installer xwit sqlite3 libnss3 libavahi-compat-libdnssd-dev libc6 make gcc wget -y
+apt-get install matchbox chromium x11-xserver-utils ttf-mscorefonts-installer xwit sqlite3 libnss3 libavahi-compat-libdnssd-dev libc6 make gcc wget omxplayer -y
 echo "============================================================"
 
 if [ "$?" = "1" ]
@@ -222,8 +230,8 @@ sleep 1;
 printf "[PiTV] Starting TV Server"
 forever start --watch --silent --sourceDir /home/$CURRENTUSER/pitv main.js
 
-printf "[PiTV] Waiting 20 seconds so the server is ready"
-sleep 20;
+printf "[PiTV] Waiting 30 seconds so the server is ready"
+sleep 30;
 if [ -f /boot/xinitrc ]; then
 	ln -fs /boot/xinitrc /home/$CURRENTUSER/.xinitrc;
 	su - $CURRENTUSER -c 'startx' &
