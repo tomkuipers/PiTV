@@ -1,0 +1,33 @@
+{
+  "name": "PiTV",
+  "version": "0.0.1",
+  "homepage": "http://pitv.pw"
+  "private": false,
+  "dependencies": {
+    "express": "~4.2.0",
+    "omxcontrol":"*",
+    "body-parser": "*",
+    "method-override": "*",
+    "ejs": "*",
+    "read-torrent": "*",
+    "peerflix": "*",
+    "node-uuid": "*",
+    "request": "*",
+    "socket.io": "*",
+    "moviedb": "*",
+    "thepiratebay": "*"
+  },
+  "author": {
+    "name": "Phil Plückthun",
+    "email": "phil@plckthn.me",
+    "url": "https://plckthn.me"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-uglify": "~0.4.0",
+    "grunt-contrib-coffee": "*",
+    "grunt-coffeelint": "*",
+    "grunt-contrib-sass": "~0.7.3",
+    "grunt-contrib-watch" : "~0.5.3"
+  }
+}
