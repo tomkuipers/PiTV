@@ -85,7 +85,7 @@ then
   exit 0
 fi
 
-apt-get install matchbox chromium x11-xserver-utils ttf-mscorefonts-installer xwit sqlite3 libnss3 libavahi-compat-libdnssd-dev libc6 make gcc wget omxplayer -y
+apt-get install matchbox chromium x11-xserver-utils ttf-mscorefonts-installer xwit sqlite3 libnss3 libavahi-compat-libdnssd-dev libc6 make gcc wget omxplayer git -y
 echo "============================================================"
 
 if [ "$?" = "1" ]
@@ -149,6 +149,18 @@ echo "============================================================"
 if [ "$?" = "1" ]
 then
   echo "An unexpected error occured while downloading!"
+  exit 0
+fi
+
+echo ""
+echo "Updating Omxcontrol node module..."
+cd /home/$CURRENTUSER/pitv/node_modules
+rm -rf omxcontrol > /dev/null
+git clone https://github.com/dplesca/omxcontrol.git > /dev/null
+
+if [ "$?" = "1" ]
+then
+  echo "An unexpected error occured while updating!"
   exit 0
 fi
 
