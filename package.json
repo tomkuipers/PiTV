@@ -1,7 +1,7 @@
 {
   "name": "PiTV",
   "version": "0.0.1",
-  "homepage": "http://pitv.pw"
+  "homepage": "http://pitv.pw",
   "private": false,
   "dependencies": {
     "express": "~4.2.0",
