@@ -65,16 +65,6 @@ done
 echo ""
 echo "============================================================"
 echo ""
-
-echo ""
-echo "Removing old X11 software... (This could take a while)"
-echo ""
-
-echo "============================================================"
-apt-get autoremove `sudo dpkg --get-selections | grep -v "deinstall" | grep x11 | sed s/install//`
-echo "============================================================"
-
-echo ""
 echo "Installing necessary dependencies... (This could take a while)"
 echo ""
 
