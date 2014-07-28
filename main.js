@@ -173,9 +173,28 @@
       return request(url, function(err, res, body) {
         var result;
         if (err) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve a list of torrents!'
+          url = 'http://yts.im/api/listimdb.json?imdb_id=' + imdbid;
+          return request(url, function(err, res, body) {
+            var result;
+            if (err) {
+              return fn({
+                success: false,
+                error: 'Could not retrieve a list of torrents!'
+              });
+            } else {
+              result = JSON.parse(body);
+              if (result.MovieCount === 0) {
+                return fn({
+                  success: false,
+                  error: 'No torrents found!'
+                });
+              } else {
+                return fn({
+                  success: true,
+                  torrents: result.MovieList
+                });
+              }
+            }
           });
         } else {
           result = JSON.parse(body);

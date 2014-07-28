@@ -111,9 +111,22 @@ remote.on 'connection', (socket) ->
     url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid
     request url, (err, res, body) ->
       if err
-        fn
-          success: false
-          error: 'Could not retrieve a list of torrents!'
+        url = 'http://yts.im/api/listimdb.json?imdb_id=' + imdbid
+        request url, (err, res, body) ->
+          if err
+            fn
+              success: false
+              error: 'Could not retrieve a list of torrents!'
+          else
+            result = JSON.parse body
+            if result.MovieCount == 0
+              fn
+                success: false
+                error: 'No torrents found!'
+            else
+              fn
+                success: true
+                torrents: result.MovieList
       else
         result = JSON.parse body
         if result.MovieCount == 0
