@@ -170,7 +170,7 @@ function buildSeason(seasonNumber) {
 }
 
 function buildEpisode(seasonNumber, episodeNumber) {
-  episode = episodes[episodeNumber];
+  episode = episodes[episodeNumber - 1];
   $('#episodeTitle').html(episode.title);
   $('#episodeDescription').html(episode.overview);
   // $('#episodePoster').attr('src', serie.images.fanart);
