@@ -32,12 +32,13 @@ store.get 'settings', (err, val) ->
   if err is null
     settings = val
 
-downloadSubtitle = (imdb_id, cb) ->
+downloadSubtitle = (imdb_id, baseurl, cb) ->
   lang = subtitleLanguage()
-  request 'http://api.yifysubtitles.com/subs/' + imdb_id, (err, res, body) ->
+  request 'http://api.' + baseurl + '/subs/' + imdb_id, (err, res, body) ->
     if err
       cb
         success: false
+        requesterr: true
     else
       result = JSON.parse body
       if result.success
@@ -311,17 +312,38 @@ remote.on 'connection', (socket) ->
             if isSubtitleEnabled() and data.imdb_id?
               rimraf __dirname + '/subtitles', ->
                 fs.mkdir __dirname + '/subtitles', ->
-                  downloadSubtitle data.imdb_id, (data) ->
-                    if data.success
-                      options.subtitle = data.path
+                  downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
+                    if result.success
+                      options.subtitle = result.path
                       omx.player.start options
-                      tv.emit 'black'
                     else
-                      omx.player.start options
-                      tv.emit 'black'
+                      if result.requesterr
+                        downloadSubtitle data.imdb_id, 'ysubs.com', (result) ->
+                          if result.success
+                            options.subtitle = result.path
+                            omx.player.start options
+                          else
+                            for i in [0...1]
+                              downloadSubtitle data.imdb_id, 'ysubs.com', (result) ->
+                                if result.success
+                                  options.subtitle = result.path
+                                  omx.player.start options
+                                  break
+                                else
+                                  if i == 1
+                                    omx.player.start options
+                      else
+                        for i in [0...1]
+                          downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
+                            if result.success
+                              options.subtitle = result.path
+                              omx.player.start options
+                              break
+                            else
+                              if i == 1
+                                omx.player.start options
             else
               omx.player.start options
-              tv.emit 'black'
           fn
             success: true
     else
@@ -351,6 +373,12 @@ remote.on 'connection', (socket) ->
         settings = data
         fn
           success: true
+  socket.on 'shutdown', (data, fn) ->
+    childProcess.exec 'poweroff', (error, stdout, stderr) ->
+      console.log 'Bye!'
+  socket.on 'reboot', (data, fn) ->
+    childProcess.exec 'reboot', (error, stdout, stderr) ->
+      console.log 'Bye!'
 
 omx.emitter.on 'stop', ->
   childProcess.exec 'xrefresh -display :0', (error, stdout, stderr) ->

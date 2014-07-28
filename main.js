@@ -63,14 +63,15 @@
     }
   });
 
-  downloadSubtitle = function(imdb_id, cb) {
+  downloadSubtitle = function(imdb_id, baseurl, cb) {
     var lang;
     lang = subtitleLanguage();
-    return request('http://api.yifysubtitles.com/subs/' + imdb_id, function(err, res, body) {
+    return request('http://api.' + baseurl + '/subs/' + imdb_id, function(err, res, body) {
       var bestSub, bestSubRating, out, req, result, sub, subs, _i, _len;
       if (err) {
         return cb({
-          success: false
+          success: false,
+          requesterr: true
         });
       } else {
         result = JSON.parse(body);
@@ -460,21 +461,59 @@
               if (isSubtitleEnabled() && (data.imdb_id != null)) {
                 return rimraf(__dirname + '/subtitles', function() {
                   return fs.mkdir(__dirname + '/subtitles', function() {
-                    return downloadSubtitle(data.imdb_id, function(data) {
-                      if (data.success) {
-                        options.subtitle = data.path;
-                        omx.player.start(options);
-                        return tv.emit('black');
+                    return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
+                      var i, _i, _results;
+                      if (result.success) {
+                        options.subtitle = result.path;
+                        return omx.player.start(options);
                       } else {
-                        omx.player.start(options);
-                        return tv.emit('black');
+                        if (result.requesterr) {
+                          return downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
+                            var i, _i, _results;
+                            if (result.success) {
+                              options.subtitle = result.path;
+                              return omx.player.start(options);
+                            } else {
+                              _results = [];
+                              for (i = _i = 0; _i < 1; i = ++_i) {
+                                _results.push(downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
+                                  if (result.success) {
+                                    options.subtitle = result.path;
+                                    omx.player.start(options);
+                                    break;
+                                  } else {
+                                    if (i === 1) {
+                                      return omx.player.start(options);
+                                    }
+                                  }
+                                }));
+                              }
+                              return _results;
+                            }
+                          });
+                        } else {
+                          _results = [];
+                          for (i = _i = 0; _i < 1; i = ++_i) {
+                            _results.push(downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
+                              if (result.success) {
+                                options.subtitle = result.path;
+                                omx.player.start(options);
+                                break;
+                              } else {
+                                if (i === 1) {
+                                  return omx.player.start(options);
+                                }
+                              }
+                            }));
+                          }
+                          return _results;
+                        }
                       }
                     });
                   });
                 });
               } else {
-                omx.player.start(options);
-                return tv.emit('black');
+                return omx.player.start(options);
               }
             });
             return fn({
@@ -510,7 +549,7 @@
         }
       });
     });
-    return socket.on('setSettings', function(data, fn) {
+    socket.on('setSettings', function(data, fn) {
       return store.set('settings', data, function(err) {
         if (err) {
           return fn({
@@ -522,6 +561,16 @@
             success: true
           });
         }
+      });
+    });
+    socket.on('shutdown', function(data, fn) {
+      return childProcess.exec('poweroff', function(error, stdout, stderr) {
+        return console.log('Bye!');
+      });
+    });
+    return socket.on('reboot', function(data, fn) {
+      return childProcess.exec('reboot', function(error, stdout, stderr) {
+        return console.log('Bye!');
       });
     });
   });

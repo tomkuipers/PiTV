@@ -364,6 +364,14 @@ function saveSettings() {
   });
 }
 
+function shutdown() {
+  socket.emit('shutdown');
+}
+
+function reboot() {
+  socket.emit('reboot');
+}
+
 riot.route(function(hash) {
   hash = hash.split('/');
   $('article').hide();
@@ -538,7 +546,7 @@ riot.route(function(hash) {
 });
 
 var socket = io('/ioremote');
-socket.on('statePlay', function(title) {
+socket.on('statePlaying', function(title) {
   $('#media-title').html(title);
 });
 socket.on('stateStop', function() {
