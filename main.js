@@ -1,5 +1,5 @@
 (function() {
-  var app, bodyParser, clearTempFiles, createTempFilename, express, fs, http, io, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, server, statePlaying, tempDir, torrentStream, tpb, tv, urltool, uuid;
+  var app, bodyParser, childProcess, clearTempFiles, createTempFilename, express, fs, http, io, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, server, statePlaying, tempDir, titlePlaying, torrentStream, tpb, tv, urltool, uuid;
 
   bodyParser = require('body-parser');
 
@@ -21,6 +21,8 @@
 
   tpb = require('thepiratebay');
 
+  childProcess = require('child_process');
+
   fs = require('fs');
 
   moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a');
@@ -38,6 +40,8 @@
   torrentStream = null;
 
   statePlaying = false;
+
+  titlePlaying = "";
 
   server.listen(80);
 
@@ -119,12 +123,12 @@
   remote.on('connection', function(socket) {
     socket.on('forwardMedia', function() {
       if (statePlaying) {
-        return omx.forward();
+        return omx.player.forward();
       }
     });
     socket.on('backwardMedia', function() {
       if (statePlaying) {
-        return omx.backward();
+        return omx.player.backward();
       }
     });
     socket.on('stopMedia', function() {
@@ -134,7 +138,7 @@
       }
       statePlaying = false;
       tv.emit('main');
-      return omx.quit();
+      return omx.player.quit();
     });
     socket.on('pauseplayMedia', function() {
       if (statePlaying) {
@@ -148,7 +152,7 @@
           torrentStream.swarm.resume();
         }
       }
-      return omx.pause();
+      return omx.player.pause();
     });
     socket.on('searchEpisodeTorrents', function(string, fn) {
       return tpb.search(string, {
@@ -337,10 +341,10 @@
         }
       });
     });
-    return socket.on('playTorrent', function(magnet, fn) {
+    socket.on('playTorrent', function(data, fn) {
       tv.emit('loading');
-      if ((magnet != null) && magnet.length > 0) {
-        return readTorrent(magnet, function(err, torrent) {
+      if ((data.magnet != null) && data.magnet.length > 0) {
+        return readTorrent(data.magnet, function(err, torrent) {
           if (err) {
             tv.emit('main');
             return fn({
@@ -362,7 +366,8 @@
               var port;
               port = torrentStream.server.address().port;
               statePlaying = true;
-              omx.start('http://127.0.0.1:' + port + '/');
+              titlePlaying = data.title;
+              omx.player.start('http://127.0.0.1:' + port + '/');
               return tv.emit('black');
             });
             return fn({
@@ -378,6 +383,25 @@
         });
       }
     });
+    return socket.on('returnState', function(fn) {
+      return fn({
+        playing: statePlaying,
+        title: titlePlaying
+      });
+    });
+  });
+
+  omx.emitter.on('stop', function() {
+    return childProcess.exec('xrefresh -display :0', function(error, stdout, stderr) {
+      remote.emit('stateStop');
+      if (error != null) {
+        return console.log("Could not give PiTV the authority back!");
+      }
+    });
+  });
+
+  omx.emitter.on('complete', function() {
+    return remote.emit('statePlaying', titlePlaying);
   });
 
 }).call(this);

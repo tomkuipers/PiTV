@@ -8,6 +8,7 @@ path = require 'path'
 http = require 'http'
 urltool = require 'url'
 tpb = require 'thepiratebay'
+childProcess = require 'child_process'
 fs = require 'fs'
 moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a')
 tempDir = require('os').tmpdir()
@@ -17,6 +18,7 @@ server = http.Server(app)
 io = require('socket.io')(server)
 torrentStream = null
 statePlaying = false
+titlePlaying = ""
 
 server.listen 80
 
@@ -74,17 +76,17 @@ remote = io.of '/ioremote'
 remote.on 'connection', (socket) ->
   socket.on 'forwardMedia', () ->
     if statePlaying
-      omx.forward()
+      omx.player.forward()
   socket.on 'backwardMedia', () ->
     if statePlaying
-      omx.backward()
+      omx.player.backward()
   socket.on 'stopMedia', () ->
     if torrentStream
       torrentStream.destroy()
       torrentStream = null
     statePlaying = false
     tv.emit 'main'
-    omx.quit()
+    omx.player.quit()
   socket.on 'pauseplayMedia', () ->
     if statePlaying
       statePlaying = false
@@ -94,7 +96,7 @@ remote.on 'connection', (socket) ->
       statePlaying = true
       if torrentStream
         torrentStream.swarm.resume()
-    omx.pause()
+    omx.player.pause()
   socket.on 'searchEpisodeTorrents', (string, fn) ->
     tpb.search string,
       category: '205'
@@ -222,10 +224,10 @@ remote.on 'connection', (socket) ->
         fn
           success: true
           movies: res.results
-  socket.on 'playTorrent', (magnet, fn) ->
+  socket.on 'playTorrent', (data, fn) ->
     tv.emit 'loading'
-    if magnet? and magnet.length > 0
-      readTorrent magnet, (err, torrent) ->
+    if data.magnet? and data.magnet.length > 0
+      readTorrent data.magnet, (err, torrent) ->
         if err
           tv.emit 'main'
           fn
@@ -245,7 +247,8 @@ remote.on 'connection', (socket) ->
           torrentStream.server.on 'listening', ->
             port = torrentStream.server.address().port
             statePlaying = true
-            omx.start 'http://127.0.0.1:' + port + '/'
+            titlePlaying = data.title
+            omx.player.start 'http://127.0.0.1:' + port + '/'
             tv.emit 'black'
           fn
             success: true
@@ -254,3 +257,16 @@ remote.on 'connection', (socket) ->
       fn
         success: false
         error: 'No magnet link received!'
+  socket.on 'returnState', (fn) ->
+    fn
+      playing: statePlaying
+      title: titlePlaying
+
+omx.emitter.on 'stop', ->
+  childProcess.exec 'xrefresh -display :0', (error, stdout, stderr) ->
+    remote.emit 'stateStop'
+    if error?
+      console.log "Could not give PiTV the authority back!"
+
+omx.emitter.on 'complete', ->
+  remote.emit 'statePlaying', titlePlaying

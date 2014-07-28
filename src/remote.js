@@ -337,20 +337,19 @@ function openEpisode(serieId, seasonNumber, episodeNumber) {
 }
 
 function playMovieTorrent(i) {
-  var magnet = movieTorrents[i].TorrentMagnetUrl;
-  socket.emit('playTorrent', magnet, function(result) {
-    if (result.success) {
-      $('#media-title').html(movie.original_title);
-    }
-  });
+  var options = {
+    magnet: movieTorrents[i].TorrentMagnetUrl,
+    title: movie.original_title
+  };
+  socket.emit('playTorrent', options, function(result) {});
 }
 
 function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
-  socket.emit('playTorrent', magnet, function(result) {
-    if (result.success) {
-      $('#media-title').html(serieName + ' S' + seasonNumber + ' E' + episodeNumber);
-    }
-  });
+  var options = {
+    magnet: magnet,
+    title: (serieName + ' S' + seasonNumber + ' E' + episodeNumber)
+  };
+  socket.emit('playTorrent', options, function(result) {});
 }
 
 riot.route(function(hash) {
@@ -506,3 +505,16 @@ riot.route(function(hash) {
 });
 
 var socket = io('/ioremote');
+socket.on('statePlay', function(title) {
+  $('#media-title').html(title);
+});
+socket.on('stateStop', function() {
+  $('#media-title').html('');
+});
+socket.on('connect', function() {
+  socket.emit('getState', function(result) {
+    if (result.playing) {
+      $('#media-title').html(result.title);
+    }
+  });
+});
