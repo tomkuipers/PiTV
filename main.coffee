@@ -328,7 +328,7 @@ remote.on 'connection', (socket) ->
                                 if result.success
                                   options.subtitle = result.path
                                   omx.player.start options
-                                  break
+                                  i = 2
                                 else
                                   if i == 1
                                     omx.player.start options
@@ -338,7 +338,7 @@ remote.on 'connection', (socket) ->
                             if result.success
                               options.subtitle = result.path
                               omx.player.start options
-                              break
+                              i = 2
                             else
                               if i == 1
                                 omx.player.start options

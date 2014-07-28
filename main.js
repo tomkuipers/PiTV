@@ -480,7 +480,7 @@
                                   if (result.success) {
                                     options.subtitle = result.path;
                                     omx.player.start(options);
-                                    break;
+                                    return i = 2;
                                   } else {
                                     if (i === 1) {
                                       return omx.player.start(options);
@@ -498,7 +498,7 @@
                               if (result.success) {
                                 options.subtitle = result.path;
                                 omx.player.start(options);
-                                break;
+                                return i = 2;
                               } else {
                                 if (i === 1) {
                                   return omx.player.start(options);
