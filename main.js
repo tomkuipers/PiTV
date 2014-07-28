@@ -1,5 +1,5 @@
 (function() {
-  var app, bodyParser, clearTempFiles, createTempFilename, express, fs, io, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, server, statePlaying, tempDir, torrentStream, tpb, tv, uuid;
+  var app, bodyParser, clearTempFiles, createTempFilename, express, fs, http, io, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, server, statePlaying, tempDir, torrentStream, tpb, tv, urltool, uuid;
 
   bodyParser = require('body-parser');
 
@@ -15,7 +15,9 @@
 
   path = require('path');
 
-  request = require('request');
+  http = require('http');
+
+  urltool = require('url');
 
   tpb = require('thepiratebay');
 
@@ -29,7 +31,7 @@
 
   app = express();
 
-  server = require('http').Server(app);
+  server = http.Server(app);
 
   io = require('socket.io')(server);
 
@@ -38,6 +40,35 @@
   statePlaying = false;
 
   server.listen(80);
+
+  request = function(url, cb) {
+    var obj, options, req;
+    obj = urltool.parse(url);
+    options = {
+      host: obj.host,
+      path: obj.path,
+      method: 'GET'
+    };
+    req = http.request(options, function(res) {
+      var str;
+      str = '';
+      if (res.statusCode !== 200) {
+        cb(true, null, null);
+      }
+      res.on('data', function(chunk) {
+        return str += chunk;
+      });
+      return res.on('end', function() {
+        return cb(null, null, str);
+      });
+    });
+    req.on('error', function(e) {
+      return cb(e, null, null);
+    });
+    req.write('data\n');
+    req.write('data\n');
+    return req.end();
+  };
 
   createTempFilename = function() {
     return path.join(tempDir, 'torrentcast_' + uuid.v4());
@@ -138,16 +169,16 @@
     });
     socket.on('searchMovieTorrents', function(imdbid, fn) {
       var url;
-      url = 'https://yts.re/api/listimdb.json?imdb_id=' + imdbid;
+      url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid;
       return request(url, function(err, res, body) {
         var result;
-        result = JSON.parse(body);
-        if (err || result === null) {
+        if (err) {
           return fn({
             success: false,
             error: 'Could not retrieve a list of torrents!'
           });
         } else {
+          result = JSON.parse(body);
           if (result.MovieCount === 0) {
             return fn({
               success: false,
@@ -180,72 +211,46 @@
       });
     });
     socket.on('getSerie', function(id, fn) {
-      return moviedb.tvInfo({
-        id: id
-      }, function(err, res) {
+      var url;
+      url = 'http://eztvapi.re/show/' + id;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve the series!'
+            error: 'Could not retrieve serie!'
           });
         } else {
-          return fn({
-            success: true,
-            serie: res
-          });
-        }
-      });
-    });
-    socket.on('getSeason', function(data, fn) {
-      return moviedb.tvSeasonInfo({
-        id: data.id,
-        season_number: data.seasonNumber
-      }, function(err, res) {
-        if (err) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve the season!'
-          });
-        } else {
-          return fn({
-            success: true,
-            episodes: res.episodes
-          });
-        }
-      });
-    });
-    socket.on('getEpisode', function(data, fn) {
-      return moviedb.tvEpisodeInfo({
-        id: data.id,
-        season_number: data.seasonNumber,
-        episode_number: data.episodeNumber
-      }, function(err, res) {
-        if (err) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve the episode!'
-          });
-        } else {
-          return fn({
-            success: true,
-            episode: res
-          });
+          try {
+            result = JSON.parse(body);
+            return fn({
+              success: true,
+              serie: result
+            });
+          } catch (_error) {
+            return fn({
+              success: false,
+              error: 'Could not retrieve serie!'
+            });
+          }
         }
       });
     });
     socket.on('getPopularSeries', function(page, fn) {
-      return moviedb.miscPopularTvs({
-        page: page
-      }, function(err, res) {
+      var url;
+      url = 'http://eztvapi.re/shows/' + page;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve any series!'
+            error: 'Could not retrieve series!'
           });
         } else {
+          result = JSON.parse(body);
           return fn({
             success: true,
-            series: res.results
+            series: result
           });
         }
       });
@@ -268,21 +273,29 @@
       });
     });
     socket.on('searchSeries', function(data, fn) {
-      return moviedb.searchTv({
-        page: data.page,
-        query: data.query,
-        search_type: 'ngram'
-      }, function(err, res) {
+      var query, url;
+      query = encodeURIComponent(data.query).replace('%20', '+');
+      url = 'http://eztvapi.re/shows/' + data.page + '?keywords=' + query;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve any series!'
+            error: 'Could not retrieve series!'
           });
         } else {
-          return fn({
-            success: true,
-            series: res.results
-          });
+          try {
+            result = JSON.parse(body);
+            return fn({
+              success: true,
+              series: result
+            });
+          } catch (_error) {
+            return fn({
+              success: false,
+              error: 'Could not retrieve series!'
+            });
+          }
         }
       });
     });

@@ -8,11 +8,10 @@ var movieTorrents = [];
 var series = [];
 var serie = {};
 
-var season = {};
-
+var episodesId = "";
 var episodes = [];
+
 var episode = {};
-var episodeTorrents = [];
 
 var seriesPage = 0;
 var moviesPage = 0;
@@ -54,14 +53,7 @@ $('#searchSeries').submit(function(e) {
     searchSeriesString = $('#searchSeries input').val();
     $('#seriesList').html('');
     if (searchSeriesString === "") {
-      for(var i = 0; i < series.length; i++) {
-        if (series[i].backdrop_path != null) {
-          $('#seriesList').append('<li>' +
-            '<div class="card" onclick="openSeries(' + series[i].id.toString() + ')" style="background-image:url(\'http://image.tmdb.org/t/p/w500' + series[i].backdrop_path + '\')">' +
-            '<span>' + series[i].name + '</span>' +
-            '</div></li>');
-        }
-      }
+      loadSeries();
     } else {
       seriesSearchPage = 0;
       seriesSearch = [];
@@ -75,10 +67,10 @@ $('#searchSeries').submit(function(e) {
           seriesSearchPage = 1;
           seriesSearch = result.series;
           for(var i = 0; i < searchSeries.length; i++) {
-            if (seriesSearch[i].backdrop_path != null) {
+            if (seriesSearch[i].images.fanart != null) {
               $('#seriesList').append('<li>' +
-                '<div class="card" onclick="openSeries(' + seriesSearch[i].id.toString() + ')" style="background-image:url(\'http://image.tmdb.org/t/p/w500' + seriesSearch[i].backdrop_path + '\')">' +
-                '<span>' + seriesSearch[i].name + '</span>' +
+                '<div class="card" onclick="openSeries(\'' + seriesSearch[i].imdb_id + '\')" style="background-image:url(\'' + seriesSearch[i].images.fanart + '\')">' +
+                '<span>' + seriesSearch[i].title + '</span>' +
                 '</div></li>');
             }
           }
@@ -87,6 +79,116 @@ $('#searchSeries').submit(function(e) {
     }
   }
 });
+
+function loadSeries() {
+  for(var i = 0; i < series.length; i++) {
+    if (series[i].images.fanart != null) {
+      $('#seriesList').append('<li>' +
+        '<div class="card" onclick="openSeries(\'' + series[i].imdb_id + '\')" style="background-image:url(\'' + series[i].images.fanart + '\')">' +
+        '<span>' + series[i].title + '</span>' +
+        '</div></li>');
+    }
+  }
+}
+
+function getSerie(imdb_id, cb) {
+  socket.emit('getSerie', imdb_id, function(result) {
+    if (result.success) {
+      serie = result.serie;
+      cb();
+    }
+  });
+}
+
+function fetchSeries(cb) {
+  socket.emit('getPopularSeries', (seriesPage + 1), function(result) {
+    if (result.success) {
+      seriesPage++;
+      for(var i = 0; i < result.series.length; i++) {
+        series.push(result.series[i]);
+        if (result.series[i].images.fanart != null) {
+          $('#seriesList').append('<li>' +
+            '<div class="card" onclick="openSeries(\'' + result.series[i].imdb_id + '\')" style="background-image:url(\'' + result.series[i].images.fanart + '\')">' +
+            '<span>' + result.series[i].title + '</span>' +
+            '</div></li>');
+        }
+      }
+      $('#loadingRemote').hide();
+    }
+  });
+}
+
+function buildSerie() {
+  $('#serieTitle').html(serie.title);
+  $('#serieDescription').html(serie.synopsis);
+  $('#seriePoster').attr('src', serie.images.fanart);
+  $('#serieStatus').html('');
+  $('#serieStatus').append('<i class="stamp">' + serie.status + '</i>');
+  for (var i = 0; i < serie.genres.length; i++) {
+    $('#serieStatus').append('<i class="stamp">' + serie.genres[i] + '</i>');
+  }
+  var serieSeasonButtons = '';
+  for(var i = 0; i < serie.num_seasons; i++) {
+    serieSeasonButtons += '<a href="javascript:openSeason(\'' + serie.imdb_id + '\', ' + (i + 1).toString() + ')">Season ' + (i + 1).toString() + '</a>';
+  }
+  $('#serieSeasonButtons').html(serieSeasonButtons);
+  $('#loadingRemote').hide();
+  $('#serie').show();
+}
+
+function compareEpisode(a,b) {
+  if (a.episode < b.episode)
+     return -1;
+  if (a.episode > b.episode)
+    return 1;
+  return 0;
+}
+
+function getSeason(seasonNumber) {
+  episodes = [];
+  for(var i = 0; i < serie.episodes.length; i++) {
+    if (serie.episodes[i].season === seasonNumber) {
+      episodes.push(serie.episodes[i]);
+    }
+  }
+  episodes.sort(compareEpisode);
+  episodesId = series.imdb_id;
+}
+
+function buildSeason(seasonNumber) {
+  $('#episodesList').html('');
+  var episodesList = '';
+  for (var i = 0; i < episodes.length; i++) {
+    episodesList += '<li>' +
+      '<div class="card" onclick="openEpisode(\'' + serie.imdb_id + '\', ' + seasonNumber + ', ' + episodes[i].episode + ')">' +
+      '<span>' + episodes[i].title + '</span>' +
+      '</div></li>';
+  }
+  $('#episodesList').html(episodesList);
+  $('#season').show();
+  $('#loadingRemote').hide();
+}
+
+function buildEpisode(seasonNumber, episodeNumber) {
+  episode = episodes[episodeNumber];
+  $('#episodeTitle').html(episode.title);
+  $('#episodeDescription').html(episode.overview);
+  // $('#episodePoster').attr('src', serie.images.fanart);
+  $('#episodeCode').html('S' + seasonNumber + ' E' + episodeNumber);
+  var episodePlayButtons = '';
+  if (episode.torrents['480p'] != null) {
+    episodePlayButtons += '<a href="javascript:playEpisodeTorrent(\''+ serie.title +'\', \''+ seasonNumber + '\', \''+ episodeNumber +'\',\'' + episode.torrents['480p'].url + '\')">Play Episode in 480p</a>';
+  }
+  if (episode.torrents['720p'] != null) {
+    episodePlayButtons += '<a href="javascript:playEpisodeTorrent(\''+ serie.title +'\', \''+ seasonNumber + '\', \''+ episodeNumber +'\',\'' + episode.torrents['720p'].url + '\')">Play Episode in 720p</a>';
+  }
+  if (episode.torrents['1080p'] != null) {
+    episodePlayButtons += '<a href="javascript:playEpisodeTorrent(\''+ serie.title +'\', \''+ seasonNumber + '\', \''+ episodeNumber +'\',\'' + episode.torrents['1080p'].url + '\')">Play Episode in 1080p</a>';
+  }
+  $('#episodePlayButtons').html(episodePlayButtons);
+  $('#episode').show();
+  $('#loadingRemote').hide();
+}
 
 $('#searchMovies').submit(function (e) {
   e.preventDefault();
@@ -172,21 +274,7 @@ function loadMore() {
   } else if (hash[1] === 'series' && hash.length == 2) {
     if (searchSeriesString === "") {
       $('#loadingRemote').show();
-      socket.emit('getPopularSeries', (seriesPage + 1), function(result) {
-        $('#loadingRemote').hide();
-        if (result.success) {
-          seriesPage++;
-          for(var i = 0; i < result.series.length; i++) {
-            series.push(result.series[i]);
-            if (result.series[i].backdrop_path != null) {
-              $('#seriesList').append('<li>' +
-                '<div class="card" onclick="openSeries(' + result.series[i].id.toString() + ')" style="background-image:url(\'http://image.tmdb.org/t/p/w500' + result.series[i].backdrop_path + '\')">' +
-                '<span>' + result.series[i].name + '</span>' +
-                '</div></li>');
-            }
-          }
-        }
-      });
+      fetchSeries();
     } else {
       $('#loadingRemote').show();
       socket.emit('searchSeries', {
@@ -344,161 +432,56 @@ riot.route(function(hash) {
     if (hash[2] != null) {
       if (hash[3] != null) {
         if (hash[4] != null) {
-          var serieId = parseInt(hash[2]);
+          var imdb_id = hash[2];
           var seasonNumber = parseInt(hash[3]);
           var episodeNumber = parseInt(hash[4]);
           $('#loadingRemote').show();
-          socket.emit('getEpisode', {
-            id: serieId,
-            seasonNumber: seasonNumber,
-            episodeNumber: episodeNumber,
-          }, function(result) {
-            episode = result.episode;
-            if (result.success) {
-              if (serie == null || serie.id !== serieId) {
-                socket.emit('getSerie', serieId, function(result) {
-                  serie = result.serie;
-                  if (result.success) {
-                    $('#episodeTitle').html(episode.name);
-                    $('#episodeDescription').html(episode.overview);
-                    $('#episodePoster').attr('src', 'http://image.tmdb.org/t/p/w780' + episode.still_path);
-                    $('#episodeCode').html('S' + seasonNumber + ' E' + episodeNumber);
-                    $('#episodePlayButtons').html('');
-                    $('#episode').show();
-                    $('#loadingRemote').hide();
-                    socket.emit('searchEpisodeTorrents', serie.name + ' S' + ('0' + seasonNumber).slice(-2) + 'E' + ('0' + episodeNumber).slice(-2), function(result) {
-                      episodeTorrents = result.torrents;
-                      console.log(episodeTorrents);
-                      if (result.success) {
-                        if (episodeTorrents.length > 0) {
-                          highestSeedersNumber = 0;
-                          highestSeeders = null;
-                          for(var i = 0; i < episodeTorrents.length; i++) {
-                            var seeders = parseInt(episodeTorrents[i].seeders);
-                            if (seeders > highestSeedersNumber) {
-                              highestSeeders = episodeTorrents[i];
-                              highestSeedersNumber = seeders;
-                            }
-                          }
-                          $('#episodePlayButtons').append('<a href="javascript:playEpisodeTorrent(\''+ serie.name +'\', \''+ seasonNumber + '\', \''+ episodeNumber +'\',\'' + highestSeeders.magnetLink + '\')">Play Episode (' + highestSeedersNumber + ')</a>');
-                        }
-                      }
-                    });
-                  }
-                });
-              } else {
-                $('#episodeTitle').html(episode.name);
-                $('#episodeDescription').html(episode.overview);
-                $('#episodePoster').attr('src', 'http://image.tmdb.org/t/p/w780' + episode.still_path);
-                $('#episodeCode').html('S' + seasonNumber + ' E' + episodeNumber);
-                $('#episodePlayButtons').html('');
-                $('#episode').show();
-                $('#loadingRemote').hide();
-                socket.emit('searchEpisodeTorrents', serie.name + ' S' + ('0' + seasonNumber).slice(-2) + 'E' + ('0' + episodeNumber).slice(-2), function(result) {
-                  episodeTorrents = result.torrents;
-                  console.log(episodeTorrents);
-                  if (result.success) {
-                    if (episodeTorrents.length > 0) {
-                      highestSeedersNumber = 0;
-                      highestSeeders = null;
-                      for(var i = 0; i < episodeTorrents.length; i++) {
-                        var seeders = parseInt(episodeTorrents[i].seeders);
-                        if (seeders > highestSeedersNumber) {
-                          highestSeeders = episodeTorrents[i];
-                          highestSeedersNumber = seeders;
-                        }
-                      }
-                      $('#episodePlayButtons').append('<a href="javascript:playEpisodeTorrent(\''+ serie.name +'\', \''+ seasonNumber + '\', \''+ episodeNumber +'\',\'' + highestSeeders.magnetLink + '\')">Play Episode (' + highestSeedersNumber + ')</a>');
-                    }
-                  }
-                });
+          if (serie == null || serie.imdb_id !== imdb_id) {
+            getSerie(imdb_id, function() {
+              if (episodes.length == 0 || episodesId !== imdb_id) {
+                getSeason(seasonNumber);
               }
-            }
-          });
-        } else {
-          episodes = [];
-          episode = {};
-          episodeTorrents = [];
-          var serieId = parseInt(hash[2]);
-          var seasonNumber = parseInt(hash[3]);
-          $('#loadingRemote').show();
-          if (serie == null || serie.id !== serieId) {
-            socket.emit('getSerie', serieId, function(result) {
-              serie = result.serie;
-              if (result.success) {
-                socket.emit('getSeason', {
-                  id: serieId,
-                  seasonNumber: seasonNumber
-                }, function(result) {
-                  if (result.success) {
-                    episodes = result.episodes;
-                    $('#episodesList').html('');
-                    for (var i = 0; i < episodes.length; i++) {
-                      $('#episodesList').append('<li>' +
-                        '<div class="card" onclick="openEpisode(' + serieId + ',' + seasonNumber + ',' + episodes[i].episode_number + ')">' +
-                        '<span>' + episodes[i].name + '<br><small>' + episodes[i].episode_number + '</small></span>' +
-                        '</div></li>');
-                    }
-                    $('#season').show();
-                    $('#loadingRemote').hide();
-                  }
-                });
-              }
+              buildEpisode(seasonNumber, episodeNumber);
             });
           } else {
-            season = serie.seasons[seasonNumber];
-            socket.emit('getSeason', {
-              id: serieId,
-              seasonNumber: seasonNumber
-            }, function(result) {
-              if (result.success) {
-                episodes = result.episodes;
-                $('#episodesList').html('');
-                for (var i = 0; i < episodes.length; i++) {
-                  $('#episodesList').append('<li>' +
-                    '<div class="card" onclick="openEpisode(' + serieId + ',' + seasonNumber + ',' + episodes[i].episode_number + ')">' +
-                    '<span>' + episodes[i].name + '</span>' +
-                    '</div></li>');
-                }
-                $('#season').show();
-                $('#loadingRemote').hide();
+            if (episodes.length == 0 || episodesId !== imdb_id) {
+              getSeason(seasonNumber);
+            }
+            buildEpisode(seasonNumber, episodeNumber);
+          }
+        } else {
+          var imdb_id = hash[2];
+          var seasonNumber = parseInt(hash[3]);
+          $('#loadingRemote').show();
+          if (serie == null || serie.imdb_id !== imdb_id) {
+            $('#loadingRemote').show();
+            getSerie(imdb_id, function() {
+              if (episodes.length == 0 || episodesId !== imdb_id) {
+                getSeason(seasonNumber);
               }
+              buildSeason(seasonNumber);
             });
+          } else {
+            $('#loadingRemote').show();
+            if (episodes.length == 0 || episodesId !== imdb_id) {
+              getSeason(seasonNumber);
+            }
+            buildSeason(seasonNumber);
           }
         }
       } else {
-        season = {};
-        episodes = [];
-        episode = {};
-        episodeTorrents = [];
-        var id = parseInt(hash[2]);
+        var imdb_id = hash[2];
         $('#loadingRemote').show();
-        socket.emit('getSerie', id, function(result) {
-          serie = result.serie;
-          if (result.success) {
-            $('#serieTitle').html(serie.name);
-            $('#serieDescription').html(serie.overview);
-            $('#seriePoster').attr('src', 'http://image.tmdb.org/t/p/w780' + serie.backdrop_path);
-            $('#serieStatus').html('');
-            $('#serieStatus').append('<i class="stamp">' + serie.status + '</i>');
-            for (var i = 0; i < serie.genres.length; i++) {
-              $('#serieStatus').append('<i class="stamp">' + serie.genres[i].name + '</i>');
-            }
-            $('#serieSeasonButtons').html('');
-            $('#serie').show();
-            $('#loadingRemote').hide();
-            for(var i = 1; i < serie.seasons.length; i++) {
-              $('#serieSeasonButtons').append('<a href="javascript:openSeason(' + id + ',' + serie.seasons[i].season_number + ')">Season ' + serie.seasons[i].season_number + '</a>');
-            }
-          }
-        });
+        if (serie == null || serie.imdb_id !== imdb_id) {
+          getSerie(imdb_id, function() {
+            buildSerie();
+          });
+        } else {
+          buildSerie();
+        }
       }
     } else {
       serie = {};
-      season = {};
-      episodes = [];
-      episode = {};
-      episodeTorrents = [];
       if (series.length > 0) {
         $('#series').show();
       } else {
@@ -506,22 +489,8 @@ riot.route(function(hash) {
         $('#series').show();
         $('#loadingRemote').show();
         seriesPage = 0;
-        socket.emit('getPopularSeries', (seriesPage + 1), function(result) {
-          $('#loadingRemote').hide();
-          if (result.success) {
-            seriesPage = 1;
-            series = result.series;
-            $('#series').show();
-            for(var i = 0; i < series.length; i++) {
-              if (series[i].backdrop_path != null) {
-                $('#seriesList').append('<li>' +
-                  '<div class="card" onclick="openSeries(' + series[i].id.toString() + ')" style="background-image:url(\'http://image.tmdb.org/t/p/w500' + series[i].backdrop_path + '\')">' +
-                  '<span>' + series[i].name + '</span>' +
-                  '</div></li>');
-              }
-            }
-          }
-        });
+        series = [];
+        fetchSeries();
       }
     }
   } else if (hash[1] === 'youtube') {

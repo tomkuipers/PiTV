@@ -12,10 +12,8 @@
     "read-torrent": "*",
     "peerflix": "*",
     "node-uuid": "*",
-    "request": "*",
     "socket.io": "*",
-    "moviedb": "*",
-    "thepiratebay": "*"
+    "moviedb": "*"
   },
   "author": {
     "name": "Phil Plückthun",

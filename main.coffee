@@ -5,19 +5,40 @@ readTorrent = require 'read-torrent'
 peerflix = require 'peerflix'
 uuid = require 'node-uuid'
 path = require 'path'
-request = require 'request'
+http = require 'http'
+urltool = require 'url'
 tpb = require 'thepiratebay'
 fs = require 'fs'
 moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a')
 tempDir = require('os').tmpdir()
 express = require 'express'
 app = express()
-server = require('http').Server(app)
+server = http.Server(app)
 io = require('socket.io')(server)
 torrentStream = null
 statePlaying = false
 
 server.listen 80
+
+request = (url, cb) ->
+  obj = urltool.parse url
+  options =
+    host: obj.host
+    path: obj.path
+    method: 'GET'
+  req = http.request options, (res) ->
+    str = ''
+    if res.statusCode isnt 200
+      cb(true, null, null)
+    res.on 'data', (chunk) ->
+      str += chunk;
+    res.on 'end', () ->
+      cb(null, null, str)
+  req.on 'error', (e) ->
+    cb(e, null, null)
+  req.write 'data\n'
+  req.write 'data\n'
+  req.end()
 
 createTempFilename = ->
   path.join tempDir, 'torrentcast_' + uuid.v4()
@@ -78,7 +99,7 @@ remote.on 'connection', (socket) ->
     tpb.search string,
       category: '205'
     , (err, results) ->
-      if (err)
+      if err
         fn
           success: false
           error: 'No torrents found!'
@@ -87,14 +108,14 @@ remote.on 'connection', (socket) ->
           success: true
           torrents: results
   socket.on 'searchMovieTorrents', (imdbid, fn) ->
-    url = 'https://yts.re/api/listimdb.json?imdb_id=' + imdbid
+    url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid
     request url, (err, res, body) ->
-      result = JSON.parse body
-      if err or result == null
+      if err
         fn
           success: false
           error: 'Could not retrieve a list of torrents!'
       else
+        result = JSON.parse body
         if result.MovieCount == 0
           fn
             success: false
@@ -116,56 +137,34 @@ remote.on 'connection', (socket) ->
           success: true
           movie: res
   socket.on 'getSerie', (id, fn) ->
-    moviedb.tvInfo
-      id: id
-    , (err, res) ->
+    url = 'http://eztvapi.re/show/' + id
+    request url, (err, res, body) ->
       if err
         fn
           success: false
-          error: 'Could not retrieve the series!'
+          error: 'Could not retrieve serie!'
       else
-        fn
-          success: true
-          serie: res
-  socket.on 'getSeason', (data, fn) ->
-    moviedb.tvSeasonInfo
-      id: data.id
-      season_number: data.seasonNumber
-    , (err, res) ->
-      if err
-        fn
-          success: false
-          error: 'Could not retrieve the season!'
-      else
-        fn
-          success: true
-          episodes: res.episodes
-  socket.on 'getEpisode', (data, fn) ->
-    moviedb.tvEpisodeInfo
-      id: data.id
-      season_number: data.seasonNumber
-      episode_number: data.episodeNumber
-    , (err, res) ->
-      if err
-        fn
-          success: false
-          error: 'Could not retrieve the episode!'
-      else
-        fn
-          success: true
-          episode: res
+        try
+          result = JSON.parse body
+          fn
+            success: true
+            serie: result
+        catch
+          fn
+            success: false
+            error: 'Could not retrieve serie!'
   socket.on 'getPopularSeries', (page, fn) ->
-    moviedb.miscPopularTvs
-      page: page
-    ,(err, res) ->
+    url = 'http://eztvapi.re/shows/' + page
+    request url, (err, res, body) ->
       if err
         fn
           success: false
-          error: 'Could not retrieve any series!'
+          error: 'Could not retrieve series!'
       else
+        result = JSON.parse body
         fn
           success: true
-          series: res.results
+          series: result
   socket.on 'getPopularMovies', (page, fn) ->
     moviedb.miscPopularMovies
       page: page
@@ -179,19 +178,23 @@ remote.on 'connection', (socket) ->
           success: true
           movies: res.results
   socket.on 'searchSeries', (data, fn) ->
-    moviedb.searchTv
-      page: data.page
-      query: data.query
-      search_type: 'ngram'
-    ,(err, res) ->
+    query = encodeURIComponent(data.query).replace('%20', '+')
+    url = 'http://eztvapi.re/shows/' + data.page + '?keywords=' + query
+    request url, (err, res, body) ->
       if err
         fn
           success: false
-          error: 'Could not retrieve any series!'
+          error: 'Could not retrieve series!'
       else
-        fn
-          success: true
-          series: res.results
+        try
+          result = JSON.parse body
+          fn
+            success: true
+            series: result
+        catch
+          fn
+            success: false
+            error: 'Could not retrieve series!'
   socket.on 'searchMovies', (data, fn) ->
     moviedb.searchMovie
       page: data.page
