@@ -10,6 +10,11 @@ urltool = require 'url'
 tpb = require 'thepiratebay'
 childProcess = require 'child_process'
 fs = require 'fs'
+rimraf = require 'rimraf'
+fsstore = require 'fs-memory-store'
+request = require 'request'
+admzip = require 'adm-zip'
+store = new fsstore(__dirname + '/store')
 moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a')
 tempDir = require('os').tmpdir()
 express = require 'express'
@@ -19,28 +24,68 @@ io = require('socket.io')(server)
 torrentStream = null
 statePlaying = false
 titlePlaying = ""
+settings = {}
 
 server.listen 80
 
-request = (url, cb) ->
-  obj = urltool.parse url
-  options =
-    host: obj.host
-    path: obj.path
-    method: 'GET'
-  req = http.request options, (res) ->
-    str = ''
-    if res.statusCode isnt 200
-      cb(true, null, null)
-    res.on 'data', (chunk) ->
-      str += chunk;
-    res.on 'end', () ->
-      cb(null, null, str)
-  req.on 'error', (e) ->
-    cb(e, null, null)
-  req.write 'data\n'
-  req.write 'data\n'
-  req.end()
+store.get 'settings', (err, val) ->
+  if err is null
+    settings = val
+
+downloadSubtitle = (imdb_id, cb) ->
+  lang = subtitleLanguage()
+  request 'http://api.yifysubtitles.com/subs/' + imdb_id, (err, res, body) ->
+    if err
+      cb
+        success: false
+    else
+      result = JSON.parse body
+      if result.success
+        if result.subs[imdb_id][lang]?
+          subs = result.subs[imdb_id][lang]
+          bestSub = null
+          bestSubRating = -99
+          for sub in subs
+            if sub.rating > bestSubRating
+              bestSub = sub
+              bestSubRating = sub.rating
+          if bestSub
+            out = fs.createWriteStream __dirname + '/subtitles/subtitle.zip'
+            req = request
+              method: 'GET',
+              uri: 'http://yifysubtitles.com' + bestSub.url.replace('\\','')
+            req.pipe out
+            req.on 'error', ->
+              cb
+                success: false
+            req.on 'end', ->
+              try
+                zip = new admzip(__dirname + '/subtitles/subtitle.zip')
+                zipEntries = zip.getEntries()
+                e = null
+                for entry in zipEntries
+                  if entry.entryName.indexOf('.srt', entry.entryName.length - 4) isnt -1
+                    e = entry
+                if e?
+                  zip.extractEntryTo e.entryName, __dirname + '/subtitles', false, true
+                  cb
+                    success: true
+                    path: __dirname + '/subtitles/' + e.entryName
+                else
+                  cb
+                    success: false
+              catch
+                cb
+                  success: false
+          else
+            cb
+              success: false
+        else
+          cb
+            success: false
+      else
+        cb
+          success: false
 
 createTempFilename = ->
   path.join tempDir, 'torrentcast_' + uuid.v4()
@@ -51,6 +96,18 @@ clearTempFiles = ->
       files.forEach (file) ->
         if file.substr 0, 11 is 'torrentcast'
           fs.rmdir path.join tempDir, file
+
+isSubtitleEnabled = ->
+  if settings.subtitles?
+    settings.subtitles
+  else
+    false
+
+subtitleLanguage = ->
+  if settings.subtitleLanguage?
+    settings.subtitleLanguage
+  else
+    ""
 
 app.use bodyParser.urlencoded
   extended: true
@@ -248,8 +305,23 @@ remote.on 'connection', (socket) ->
             port = torrentStream.server.address().port
             statePlaying = true
             titlePlaying = data.title
-            omx.player.start 'http://127.0.0.1:' + port + '/'
-            tv.emit 'black'
+            options = {}
+            options.input = 'http://127.0.0.1:' + port + '/'
+
+            if isSubtitleEnabled() and data.imdb_id?
+              rimraf __dirname + '/subtitles', ->
+                fs.mkdir __dirname + '/subtitles', ->
+                  downloadSubtitle data.imdb_id, (data) ->
+                    if data.success
+                      options.subtitle = data.path
+                      omx.player.start options
+                      tv.emit 'black'
+                    else
+                      omx.player.start options
+                      tv.emit 'black'
+            else
+              omx.player.start options
+              tv.emit 'black'
           fn
             success: true
     else
@@ -261,6 +333,24 @@ remote.on 'connection', (socket) ->
     fn
       playing: statePlaying
       title: titlePlaying
+  socket.on 'getSettings', (fn) ->
+    store.get 'settings', (err, val) ->
+      if err
+        fn
+          success: false
+      else
+        fn
+          success: true
+          settings: val
+  socket.on 'setSettings', (data, fn) ->
+    store.set 'settings', data, (err) ->
+      if err
+        fn
+          success: false
+      else
+        settings = data
+        fn
+          success: true
 
 omx.emitter.on 'stop', ->
   childProcess.exec 'xrefresh -display :0', (error, stdout, stderr) ->

@@ -69,7 +69,7 @@ $('#searchSeries').submit(function(e) {
           for(var i = 0; i < searchSeries.length; i++) {
             if (seriesSearch[i].images.fanart != null) {
               $('#seriesList').append('<li>' +
-                '<div class="card" onclick="openSeries(\'' + seriesSearch[i].imdb_id + '\')" style="background-image:url(\'' + seriesSearch[i].images.fanart + '\')">' +
+                '<div class="card" onclick="openSeries(\'' + seriesSearch[i].imdb_id + '\')" style="background-image:url(\'' + seriesSearch[i].images.fanart.replace('.jpg','-940.jpg') + '\')">' +
                 '<span>' + seriesSearch[i].title + '</span>' +
                 '</div></li>');
             }
@@ -84,7 +84,7 @@ function loadSeries() {
   for(var i = 0; i < series.length; i++) {
     if (series[i].images.fanart != null) {
       $('#seriesList').append('<li>' +
-        '<div class="card" onclick="openSeries(\'' + series[i].imdb_id + '\')" style="background-image:url(\'' + series[i].images.fanart + '\')">' +
+        '<div class="card" onclick="openSeries(\'' + series[i].imdb_id + '\')" style="background-image:url(\'' + series[i].images.fanart.replace('.jpg','-940.jpg') + '\')">' +
         '<span>' + series[i].title + '</span>' +
         '</div></li>');
     }
@@ -108,7 +108,7 @@ function fetchSeries(cb) {
         series.push(result.series[i]);
         if (result.series[i].images.fanart != null) {
           $('#seriesList').append('<li>' +
-            '<div class="card" onclick="openSeries(\'' + result.series[i].imdb_id + '\')" style="background-image:url(\'' + result.series[i].images.fanart + '\')">' +
+            '<div class="card" onclick="openSeries(\'' + result.series[i].imdb_id + '\')" style="background-image:url(\'' + result.series[i].images.fanart.replace('.jpg','-940.jpg') + '\')">' +
             '<span>' + result.series[i].title + '</span>' +
             '</div></li>');
         }
@@ -339,7 +339,8 @@ function openEpisode(serieId, seasonNumber, episodeNumber) {
 function playMovieTorrent(i) {
   var options = {
     magnet: movieTorrents[i].TorrentMagnetUrl,
-    title: movie.original_title
+    title: movie.original_title,
+    imdb_id: movie.imdb_id
   };
   socket.emit('playTorrent', options, function(result) {});
 }
@@ -347,9 +348,20 @@ function playMovieTorrent(i) {
 function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
   var options = {
     magnet: magnet,
-    title: (serieName + ' S' + seasonNumber + ' E' + episodeNumber)
+    title: (serieName + ' S' + seasonNumber + ' E' + episodeNumber),
+    imdb_id: episode.imdb_id
   };
   socket.emit('playTorrent', options, function(result) {});
+}
+
+function saveSettings() {
+  data = {};
+  data.subtitles = $('#setting-use-subtitles').prop("checked");
+  data.subtitleLanguage = $('#setting-subtitle-lang').val();
+  $('#loadingRemote').show();
+  socket.emit('setSettings', data, function(result) {
+    $('#loadingRemote').hide();
+  });
 }
 
 riot.route(function(hash) {
@@ -498,6 +510,27 @@ riot.route(function(hash) {
 
   } else if (hash[1] === 'homecontrol') {
 
+  } else if (hash[1] === 'settings') {
+    $('#loadingRemote').show();
+    socket.emit('getSettings', function(result) {
+      if (result.success) {
+        if (result.settings == null) {
+          result.settings = {};
+          result.settings.subtitles = false;
+          result.settings.subtitleLanguage = '';
+        }
+        if (result.settings.subtitles == null) {
+          result.settings.subtitles = false;
+        }
+        if (result.settings.subtitleLanguage == null) {
+          result.settings.subtitleLanguage = '';
+        }
+        $('#setting-use-subtitles').prop("checked", result.settings.subtitles);
+        $('#setting-subtitle-lang').val(result.settings.subtitleLanguage);
+        $('#settings').show();
+        $('#loadingRemote').hide();
+      }
+    });
   } else {
     $('#start').show();
   }

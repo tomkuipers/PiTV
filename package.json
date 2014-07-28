@@ -13,7 +13,11 @@
     "peerflix": "*",
     "node-uuid": "*",
     "socket.io": "*",
-    "moviedb": "*"
+    "moviedb": "*",
+    "fs-memory-store": "*",
+    "request": "*",
+    "adm-zip": "*",
+    "rimraf": "*"
   },
   "author": {
     "name": "Phil Plückthun",
