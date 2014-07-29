@@ -642,13 +642,17 @@
                   filename: match[1]
                 };
                 console.log(query);
-                return downloadSeriesSubtitle(query, function(result) {
-                  if (result.success) {
-                    options.subtitle = result.path;
-                    return omx.player.start(options);
-                  } else {
-                    return omx.player.start(options);
-                  }
+                return rimraf(__dirname + '/subtitles', function() {
+                  return fs.mkdir(__dirname + '/subtitles', function() {
+                    return downloadSeriesSubtitle(query, function(result) {
+                      if (result.success) {
+                        options.subtitle = result.path;
+                        return omx.player.start(options);
+                      } else {
+                        return omx.player.start(options);
+                      }
+                    });
+                  });
                 });
               } else {
                 return omx.player.start(options);
@@ -667,7 +671,7 @@
         });
       }
     });
-    socket.on('returnState', function(fn) {
+    socket.on('getState', function(fn) {
       return fn({
         playing: statePlaying,
         title: titlePlaying

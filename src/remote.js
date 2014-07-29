@@ -75,11 +75,22 @@ $('#searchSeries').submit(function(e) {
                 '</div></li>');
             }
           }
+        } else {
+          alert('Couldn\'t get any search results! Please try again.');
         }
       });
     }
   }
 });
+
+function alert(msg) {
+  $('alert-message').html(msg);
+  $('alert').show();
+}
+
+function closeAlert() {
+  $('alert').hide();
+}
 
 function loadSeries() {
   for(var i = 0; i < series.length; i++) {
@@ -97,6 +108,8 @@ function getSerie(imdb_id, cb) {
     if (result.success) {
       serie = result.serie;
       cb();
+    } else {
+      alert('Couldn\'t get the serie you requested! Please try again.');
     }
   });
 }
@@ -114,6 +127,9 @@ function fetchSeries(cb) {
             '</div></li>');
         }
       }
+      $('#loadingRemote').hide();
+    } else {
+      alert('Couldn\'t get any series! Please try again.');
       $('#loadingRemote').hide();
     }
   });
@@ -225,6 +241,8 @@ $('#searchMovies').submit(function (e) {
                 '</div></li>');
             }
           }
+        } else {
+          alert('Couldn\'t get any movies! Please try again.');
         }
       });
     }
@@ -249,6 +267,8 @@ function loadMore() {
                 '</div></li>');
             }
           }
+        } else {
+          alert('Couldn\'t get any movies! Please try again.');
         }
       });
     } else {
@@ -269,6 +289,8 @@ function loadMore() {
                 '</div></li>');
             }
           }
+        } else {
+          alert('Couldn\'t get any movies! Please try again.');
         }
       });
     }
@@ -294,6 +316,8 @@ function loadMore() {
                 '</div></li>');
             }
           }
+        } else {
+          alert('Couldn\'t get any series! Please try again.');
         }
       });
     }
@@ -345,7 +369,13 @@ function playMovieTorrent(i) {
       imdb_id: movie.imdb_id
     }
   };
-  socket.emit('playTorrent', options, function(result) {});
+  socket.emit('playTorrent', options, function(result) {
+    if (!result.success) {
+      alert('Couldn\'t play the episode! Please try again.');
+    } else {
+      $('#media-title').html(movie.original_title);
+    }
+  });
 }
 
 function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
@@ -358,7 +388,13 @@ function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
       episode: episodeNumber.toString()
     }
   };
-  socket.emit('playTorrent', options, function(result) {});
+  socket.emit('playTorrent', options, function(result) {
+    if (!result.success) {
+      alert('Couldn\'t play the episode! Please try again.');
+    } else {
+      $('#media-title').html(serieName + ' S' + seasonNumber + ' E' + episodeNumber);
+    }
+  });
 }
 
 function saveSettings() {
@@ -367,6 +403,9 @@ function saveSettings() {
   data.subtitleLanguage = $('#setting-subtitle-lang').val();
   $('#loadingRemote').show();
   socket.emit('setSettings', data, function(result) {
+    if (!result.success) {
+      alert('Couldn\'t set your settings! Please try again.');
+    }
     $('#loadingRemote').hide();
   });
 }
@@ -421,6 +460,8 @@ riot.route(function(hash) {
                 var torrent = movieTorrents[i];
                 $('#moviePlayButtons').append('<a href="javascript:playMovieTorrent(' + i + ')">Play in ' + torrent.Quality + '</a>');
               }
+            } else {
+              alert('Couldn\'t get any torrents! Please check if YifyTorrents is blocked in your country.');
             }
           });
         }
@@ -447,6 +488,8 @@ riot.route(function(hash) {
                   '</div></li>');
               }
             }
+          } else {
+            alert('Couldn\'t get any movies! Please try again.');
           }
         });
       }

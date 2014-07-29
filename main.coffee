@@ -421,12 +421,14 @@ remote.on 'connection', (socket) ->
                 episode: data.episode.episode
                 filename: match[1]
               console.log query
-              downloadSeriesSubtitle query, (result) ->
-                if result.success
-                  options.subtitle = result.path
-                  omx.player.start options
-                else
-                  omx.player.start options
+              rimraf __dirname + '/subtitles', ->
+                fs.mkdir __dirname + '/subtitles', ->
+                  downloadSeriesSubtitle query, (result) ->
+                    if result.success
+                      options.subtitle = result.path
+                      omx.player.start options
+                    else
+                      omx.player.start options
             else
               omx.player.start options
           fn
@@ -436,7 +438,7 @@ remote.on 'connection', (socket) ->
       fn
         success: false
         error: 'No magnet link received!'
-  socket.on 'returnState', (fn) ->
+  socket.on 'getState', (fn) ->
     fn
       playing: statePlaying
       title: titlePlaying

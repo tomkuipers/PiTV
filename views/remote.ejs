@@ -190,6 +190,16 @@
     <span id="media-title"></span>
   </footer>
 
+  <div class="alert" style="display:none" id="alert">
+    <div class="window">
+      <h1><i class="fa fa-exclamation-triangle"></i> An error occured!</h1>
+      <p id="alert-message"></p>
+      <a href="javascript:closeAlert()">
+        <i class="fa fa-check-circle-o"></i>
+      </a>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/static/js/remote.js"></script>
 </body>
