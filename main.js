@@ -19,8 +19,6 @@
 
   urltool = require('url');
 
-  tpb = require('thepiratebay');
-
   childProcess = require('child_process');
 
   fs = require('fs');
