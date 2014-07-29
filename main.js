@@ -641,7 +641,8 @@
                   episode: data.episode.episode,
                   filename: match[1]
                 };
-                return downloadSeriesSubtitle(query, function(err, result) {
+                console.log(query);
+                return downloadSeriesSubtitle(query, function(result) {
                   if (result.success) {
                     options.subtitle = result.path;
                     return omx.player.start(options);

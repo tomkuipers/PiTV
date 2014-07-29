@@ -420,7 +420,8 @@ remote.on 'connection', (socket) ->
                 season: data.episode.season
                 episode: data.episode.episode
                 filename: match[1]
-              downloadSeriesSubtitle query, (err, result) ->
+              console.log query
+              downloadSeriesSubtitle query, (result) ->
                 if result.success
                   options.subtitle = result.path
                   omx.player.start options

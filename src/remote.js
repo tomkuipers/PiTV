@@ -12,6 +12,7 @@ var episodesId = "";
 var episodes = [];
 
 var episode = {};
+var episodeImdbId = '';
 
 var seriesPage = 0;
 var moviesPage = 0;
@@ -352,7 +353,7 @@ function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
     magnet: magnet,
     title: (serieName + ' S' + seasonNumber + ' E' + episodeNumber),
     episode: {
-      imdb_id: episode.imdb_id,
+      imdb_id: serie.imdb_id,
       season: seasonNumber.toString(),
       episode: episodeNumber.toString()
     }
