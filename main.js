@@ -607,6 +607,7 @@
                                   options.subtitle = result.path;
                                   return omx.player.start(options);
                                 } else {
+                                  remote.emit('error', "No subtitles found! Playing without...");
                                   return omx.player.start(options);
                                 }
                               });
@@ -618,6 +619,7 @@
                               options.subtitle = result.path;
                               return omx.player.start(options);
                             } else {
+                              remote.emit('error', "No subtitles found! Playing without...");
                               return omx.player.start(options);
                             }
                           });
@@ -628,14 +630,19 @@
                 });
               } else if (isSubtitleEnabled() && (data.episode != null)) {
                 filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig;
-                match = filenameReg.exec(data.magnet);
                 query = {
                   imdbid: data.episode.imdb_id,
                   season: data.episode.season,
-                  episode: data.episode.episode,
-                  filename: match[1]
+                  episode: data.episode.episode
                 };
-                console.log(query);
+                try {
+                  match = filenameReg.exec(data.magnet);
+                  if (match != null) {
+                    query.filename = match[1];
+                  }
+                } catch (_error) {
+                  console.log('Could not extract filename!');
+                }
                 return rimraf(__dirname + '/subtitles', function() {
                   return fs.mkdir(__dirname + '/subtitles', function() {
                     return downloadSeriesSubtitle(query, function(result) {
@@ -643,6 +650,7 @@
                         options.subtitle = result.path;
                         return omx.player.start(options);
                       } else {
+                        remote.emit('error', "No subtitles found! Playing without...");
                         return omx.player.start(options);
                       }
                     });

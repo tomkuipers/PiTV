@@ -76,14 +76,14 @@ $('#searchSeries').submit(function(e) {
             }
           }
         } else {
-          alert('Couldn\'t get any search results! Please try again.');
+          throwAlert('Couldn\'t get any search results! Please try again.');
         }
       });
     }
   }
 });
 
-function alert(msg) {
+function throwAlert(msg) {
   $('alert-message').html(msg);
   $('alert').show();
 }
@@ -109,7 +109,7 @@ function getSerie(imdb_id, cb) {
       serie = result.serie;
       cb();
     } else {
-      alert('Couldn\'t get the serie you requested! Please try again.');
+      throwAlert('Couldn\'t get the serie you requested! Please try again.');
     }
   });
 }
@@ -129,7 +129,7 @@ function fetchSeries(cb) {
       }
       $('#loadingRemote').hide();
     } else {
-      alert('Couldn\'t get any series! Please try again.');
+      throwAlert('Couldn\'t get any series! Please try again.');
       $('#loadingRemote').hide();
     }
   });
@@ -242,7 +242,7 @@ $('#searchMovies').submit(function (e) {
             }
           }
         } else {
-          alert('Couldn\'t get any movies! Please try again.');
+          throwAlert('Couldn\'t get any movies! Please try again.');
         }
       });
     }
@@ -268,7 +268,7 @@ function loadMore() {
             }
           }
         } else {
-          alert('Couldn\'t get any movies! Please try again.');
+          throwAlert('Couldn\'t get any movies! Please try again.');
         }
       });
     } else {
@@ -290,7 +290,7 @@ function loadMore() {
             }
           }
         } else {
-          alert('Couldn\'t get any movies! Please try again.');
+          throwAlert('Couldn\'t get any movies! Please try again.');
         }
       });
     }
@@ -317,7 +317,7 @@ function loadMore() {
             }
           }
         } else {
-          alert('Couldn\'t get any series! Please try again.');
+          throwAlert('Couldn\'t get any series! Please try again.');
         }
       });
     }
@@ -371,7 +371,7 @@ function playMovieTorrent(i) {
   };
   socket.emit('playTorrent', options, function(result) {
     if (!result.success) {
-      alert('Couldn\'t play the episode! Please try again.');
+      throwAlert('Couldn\'t play the episode! Please try again.');
     } else {
       $('#media-title').html(movie.original_title);
     }
@@ -390,7 +390,7 @@ function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
   };
   socket.emit('playTorrent', options, function(result) {
     if (!result.success) {
-      alert('Couldn\'t play the episode! Please try again.');
+      throwAlert('Couldn\'t play the episode! Please try again.');
     } else {
       $('#media-title').html(serieName + ' S' + seasonNumber + ' E' + episodeNumber);
     }
@@ -404,7 +404,7 @@ function saveSettings() {
   $('#loadingRemote').show();
   socket.emit('setSettings', data, function(result) {
     if (!result.success) {
-      alert('Couldn\'t set your settings! Please try again.');
+      throwAlert('Couldn\'t set your settings! Please try again.');
     }
     $('#loadingRemote').hide();
   });
@@ -461,7 +461,7 @@ riot.route(function(hash) {
                 $('#moviePlayButtons').append('<a href="javascript:playMovieTorrent(' + i + ')">Play in ' + torrent.Quality + '</a>');
               }
             } else {
-              alert('Couldn\'t get any torrents! Please check if YifyTorrents is blocked in your country.');
+              throwAlert('Couldn\'t get any torrents! Please check if YifyTorrents is blocked in your country.');
             }
           });
         }
@@ -489,7 +489,7 @@ riot.route(function(hash) {
               }
             }
           } else {
-            alert('Couldn\'t get any movies! Please try again.');
+            throwAlert('Couldn\'t get any movies! Please try again.');
           }
         });
       }
@@ -601,6 +601,9 @@ socket.on('statePlaying', function(title) {
 });
 socket.on('stateStop', function() {
   $('#media-title').html('');
+});
+socket.on('error', function(msg) {
+  throwAlert(msg);
 });
 socket.on('connect', function() {
   socket.emit('getState', function(result) {

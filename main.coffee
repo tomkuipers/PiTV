@@ -400,6 +400,7 @@ remote.on 'connection', (socket) ->
                                 options.subtitle = result.path
                                 omx.player.start options
                               else
+                                remote.emit 'error', "No subtitles found! Playing without..."
                                 omx.player.start options
                       else
                         downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
@@ -407,16 +408,20 @@ remote.on 'connection', (socket) ->
                             options.subtitle = result.path
                             omx.player.start options
                           else
+                            remote.emit 'error', "No subtitles found! Playing without..."
                             omx.player.start options
             else if isSubtitleEnabled() and data.episode?
               filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig
-              match = filenameReg.exec data.magnet
               query =
                 imdbid: data.episode.imdb_id
                 season: data.episode.season
                 episode: data.episode.episode
-                filename: match[1]
-              console.log query
+              try
+                match = filenameReg.exec data.magnet
+                if match?
+                  query.filename = match[1]
+              catch
+                console.log 'Could not extract filename!'
               rimraf __dirname + '/subtitles', ->
                 fs.mkdir __dirname + '/subtitles', ->
                   downloadSeriesSubtitle query, (result) ->
@@ -424,6 +429,7 @@ remote.on 'connection', (socket) ->
                       options.subtitle = result.path
                       omx.player.start options
                     else
+                      remote.emit 'error', "No subtitles found! Playing without..."
                       omx.player.start options
             else
               omx.player.start options
