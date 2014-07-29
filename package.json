@@ -5,17 +5,20 @@
   "private": false,
   "dependencies": {
     "express": "~4.2.0",
-    "omxcontrol":"*",
     "body-parser": "*",
     "method-override": "*",
     "ejs": "*",
     "read-torrent": "*",
     "peerflix": "*",
     "node-uuid": "*",
-    "request": "*",
     "socket.io": "*",
     "moviedb": "*",
-    "thepiratebay": "*"
+    "fs-memory-store": "*",
+    "request": "*",
+    "adm-zip": "*",
+    "rimraf": "*",
+    "xmlrpc": "*",
+    "async": "*"
   },
   "author": {
     "name": "Phil Plückthun",

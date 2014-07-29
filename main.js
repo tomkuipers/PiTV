@@ -1,11 +1,11 @@
 (function() {
-  var app, bodyParser, clearTempFiles, createTempFilename, express, fs, io, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, server, statePlaying, tempDir, torrentStream, tpb, tv, uuid;
+  var admzip, app, bodyParser, childProcess, clearTempFiles, convertLanguageCode, createTempFilename, downloadSeriesSubtitle, downloadSubtitle, express, fs, fsstore, http, io, isSubtitleEnabled, methodOverride, moviedb, omx, opensrt, path, peerflix, readTorrent, remote, request, rimraf, server, settings, statePlaying, store, subtitleLanguage, tempDir, titlePlaying, torrentStream, tpb, tv, urltool, uuid;
 
   bodyParser = require('body-parser');
 
   methodOverride = require('method-override');
 
-  omx = require('omxcontrol');
+  omx = require('./omxcontrol.js');
 
   readTorrent = require('read-torrent');
 
@@ -15,11 +15,27 @@
 
   path = require('path');
 
-  request = require('request');
+  http = require('http');
+
+  urltool = require('url');
 
   tpb = require('thepiratebay');
 
+  childProcess = require('child_process');
+
   fs = require('fs');
+
+  rimraf = require('rimraf');
+
+  fsstore = require('fs-memory-store');
+
+  request = require('request');
+
+  admzip = require('adm-zip');
+
+  opensrt = require('./opensrt.js');
+
+  store = new fsstore(__dirname + '/store');
 
   moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a');
 
@@ -29,7 +45,7 @@
 
   app = express();
 
-  server = require('http').Server(app);
+  server = http.Server(app);
 
   io = require('socket.io')(server);
 
@@ -37,7 +53,229 @@
 
   statePlaying = false;
 
+  titlePlaying = "";
+
+  settings = {};
+
   server.listen(80);
+
+  store.get('settings', function(err, val) {
+    if (err === null) {
+      return settings = val;
+    }
+  });
+
+  convertLanguageCode = function(input) {
+    switch (input) {
+      case "albanian":
+        return "al";
+      case "arabic":
+        return "ar";
+      case "bengali":
+        return "bn";
+      case "brazilian-portuguese":
+        return "pt";
+      case "bulgarian":
+        return "bg";
+      case "chinese":
+        return "zh";
+      case "croatian":
+        return "hr";
+      case "czech":
+        return "cs";
+      case "danish":
+        return "da";
+      case "dutch":
+        return "nl";
+      case "english":
+        return "en";
+      case "farsi-persian":
+        return "fa";
+      case "finnish":
+        return "fi";
+      case "french":
+        return "fr";
+      case "german":
+        return "de";
+      case "greek":
+        return "el";
+      case "hebrew":
+        return "he";
+      case "hungarian":
+        return "hu";
+      case "indonesian":
+        return "id";
+      case "italian":
+        return "it";
+      case "japanese":
+        return "ja";
+      case "korean":
+        return "ko";
+      case "lithuanian":
+        return "lt";
+      case "macedonian":
+        return "mk";
+      case "malay":
+        return "ms";
+      case "norwegian":
+        return "no";
+      case "polish":
+        return "pl";
+      case "portugese":
+        return "pt";
+      case "romanian":
+        return "ro";
+      case "russian":
+        return "ru";
+      case "serbian":
+        return "sr";
+      case "slovenian":
+        return "sl";
+      case "spanish":
+        return "es";
+      case "swedish":
+        return "sv";
+      case "thai":
+        return "th";
+      case "turkish":
+        return "tr";
+      case "urdu":
+        return "ur";
+      case "vietnamese":
+        return "vi";
+      default:
+        return null;
+    }
+  };
+
+  downloadSeriesSubtitle = function(query, cb) {
+    var lang;
+    lang = subtitleLanguage();
+    return opensrt.searchEpisode(query, function(err, res) {
+      var langcode, out, req, subtitle;
+      if (err) {
+        return cb({
+          success: false
+        });
+      } else {
+        langcode = convertLanguageCode(lang);
+        if (langcode != null) {
+          subtitle = res[langcode];
+          if (subtitle != null) {
+            out = fs.createWriteStream(__dirname + '/subtitles/subtitle.srt');
+            req = request({
+              method: 'GET',
+              uri: subtitle.url
+            });
+            req.pipe(out);
+            req.on('error', function() {
+              return cb({
+                success: false
+              });
+            });
+            return req.on('end', function() {
+              return cb({
+                success: true,
+                path: __dirname + '/subtitles/subtitle.srt'
+              });
+            });
+          } else {
+            return cb({
+              success: false
+            });
+          }
+        } else {
+          return cb({
+            success: false
+          });
+        }
+      }
+    });
+  };
+
+  downloadSubtitle = function(imdb_id, baseurl, cb) {
+    var lang;
+    lang = subtitleLanguage();
+    return request('http://api.' + baseurl + '/subs/' + imdb_id, function(err, res, body) {
+      var bestSub, bestSubRating, out, req, result, sub, subs, _i, _len;
+      if (err) {
+        return cb({
+          success: false,
+          requesterr: true
+        });
+      } else {
+        result = JSON.parse(body);
+        if (result.success) {
+          if (result.subs[imdb_id][lang] != null) {
+            subs = result.subs[imdb_id][lang];
+            bestSub = null;
+            bestSubRating = -99;
+            for (_i = 0, _len = subs.length; _i < _len; _i++) {
+              sub = subs[_i];
+              if (sub.rating > bestSubRating) {
+                bestSub = sub;
+                bestSubRating = sub.rating;
+              }
+            }
+            if (bestSub) {
+              out = fs.createWriteStream(__dirname + '/subtitles/subtitle.zip');
+              req = request({
+                method: 'GET',
+                uri: 'http://yifysubtitles.com' + bestSub.url.replace('\\', '')
+              });
+              req.pipe(out);
+              req.on('error', function() {
+                return cb({
+                  success: false
+                });
+              });
+              return req.on('end', function() {
+                var e, entry, zip, zipEntries, _j, _len1;
+                try {
+                  zip = new admzip(__dirname + '/subtitles/subtitle.zip');
+                  zipEntries = zip.getEntries();
+                  e = null;
+                  for (_j = 0, _len1 = zipEntries.length; _j < _len1; _j++) {
+                    entry = zipEntries[_j];
+                    if (entry.entryName.indexOf('.srt', entry.entryName.length - 4) !== -1) {
+                      e = entry;
+                    }
+                  }
+                  if (e != null) {
+                    zip.extractEntryTo(e.entryName, __dirname + '/subtitles', false, true);
+                    return cb({
+                      success: true,
+                      path: __dirname + '/subtitles/' + e.entryName
+                    });
+                  } else {
+                    return cb({
+                      success: false
+                    });
+                  }
+                } catch (_error) {
+                  return cb({
+                    success: false
+                  });
+                }
+              });
+            } else {
+              return cb({
+                success: false
+              });
+            }
+          } else {
+            return cb({
+              success: false
+            });
+          }
+        } else {
+          return cb({
+            success: false
+          });
+        }
+      }
+    });
+  };
 
   createTempFilename = function() {
     return path.join(tempDir, 'torrentcast_' + uuid.v4());
@@ -53,6 +291,22 @@
         });
       }
     });
+  };
+
+  isSubtitleEnabled = function() {
+    if (settings.subtitles != null) {
+      return settings.subtitles;
+    } else {
+      return false;
+    }
+  };
+
+  subtitleLanguage = function() {
+    if (settings.subtitleLanguage != null) {
+      return settings.subtitleLanguage;
+    } else {
+      return "";
+    }
   };
 
   app.use(bodyParser.urlencoded({
@@ -88,12 +342,12 @@
   remote.on('connection', function(socket) {
     socket.on('forwardMedia', function() {
       if (statePlaying) {
-        return omx.forward();
+        return omx.player.forward();
       }
     });
     socket.on('backwardMedia', function() {
       if (statePlaying) {
-        return omx.backward();
+        return omx.player.backward();
       }
     });
     socket.on('stopMedia', function() {
@@ -103,7 +357,7 @@
       }
       statePlaying = false;
       tv.emit('main');
-      return omx.quit();
+      return omx.player.quit();
     });
     socket.on('pauseplayMedia', function() {
       if (statePlaying) {
@@ -117,7 +371,7 @@
           torrentStream.swarm.resume();
         }
       }
-      return omx.pause();
+      return omx.player.pause();
     });
     socket.on('searchEpisodeTorrents', function(string, fn) {
       return tpb.search(string, {
@@ -138,16 +392,35 @@
     });
     socket.on('searchMovieTorrents', function(imdbid, fn) {
       var url;
-      url = 'https://yts.re/api/listimdb.json?imdb_id=' + imdbid;
+      url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid;
       return request(url, function(err, res, body) {
         var result;
-        result = JSON.parse(body);
-        if (err || result === null) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve a list of torrents!'
+        if (err) {
+          url = 'http://yts.im/api/listimdb.json?imdb_id=' + imdbid;
+          return request(url, function(err, res, body) {
+            var result;
+            if (err) {
+              return fn({
+                success: false,
+                error: 'Could not retrieve a list of torrents!'
+              });
+            } else {
+              result = JSON.parse(body);
+              if (result.MovieCount === 0) {
+                return fn({
+                  success: false,
+                  error: 'No torrents found!'
+                });
+              } else {
+                return fn({
+                  success: true,
+                  torrents: result.MovieList
+                });
+              }
+            }
           });
         } else {
+          result = JSON.parse(body);
           if (result.MovieCount === 0) {
             return fn({
               success: false,
@@ -180,72 +453,46 @@
       });
     });
     socket.on('getSerie', function(id, fn) {
-      return moviedb.tvInfo({
-        id: id
-      }, function(err, res) {
+      var url;
+      url = 'http://eztvapi.re/show/' + id;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve the series!'
+            error: 'Could not retrieve serie!'
           });
         } else {
-          return fn({
-            success: true,
-            serie: res
-          });
-        }
-      });
-    });
-    socket.on('getSeason', function(data, fn) {
-      return moviedb.tvSeasonInfo({
-        id: data.id,
-        season_number: data.seasonNumber
-      }, function(err, res) {
-        if (err) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve the season!'
-          });
-        } else {
-          return fn({
-            success: true,
-            episodes: res.episodes
-          });
-        }
-      });
-    });
-    socket.on('getEpisode', function(data, fn) {
-      return moviedb.tvEpisodeInfo({
-        id: data.id,
-        season_number: data.seasonNumber,
-        episode_number: data.episodeNumber
-      }, function(err, res) {
-        if (err) {
-          return fn({
-            success: false,
-            error: 'Could not retrieve the episode!'
-          });
-        } else {
-          return fn({
-            success: true,
-            episode: res
-          });
+          try {
+            result = JSON.parse(body);
+            return fn({
+              success: true,
+              serie: result
+            });
+          } catch (_error) {
+            return fn({
+              success: false,
+              error: 'Could not retrieve serie!'
+            });
+          }
         }
       });
     });
     socket.on('getPopularSeries', function(page, fn) {
-      return moviedb.miscPopularTvs({
-        page: page
-      }, function(err, res) {
+      var url;
+      url = 'http://eztvapi.re/shows/' + page;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve any series!'
+            error: 'Could not retrieve series!'
           });
         } else {
+          result = JSON.parse(body);
           return fn({
             success: true,
-            series: res.results
+            series: result
           });
         }
       });
@@ -268,21 +515,29 @@
       });
     });
     socket.on('searchSeries', function(data, fn) {
-      return moviedb.searchTv({
-        page: data.page,
-        query: data.query,
-        search_type: 'ngram'
-      }, function(err, res) {
+      var query, url;
+      query = encodeURIComponent(data.query).replace('%20', '+');
+      url = 'http://eztvapi.re/shows/' + data.page + '?keywords=' + query;
+      return request(url, function(err, res, body) {
+        var result;
         if (err) {
           return fn({
             success: false,
-            error: 'Could not retrieve any series!'
+            error: 'Could not retrieve series!'
           });
         } else {
-          return fn({
-            success: true,
-            series: res.results
-          });
+          try {
+            result = JSON.parse(body);
+            return fn({
+              success: true,
+              series: result
+            });
+          } catch (_error) {
+            return fn({
+              success: false,
+              error: 'Could not retrieve series!'
+            });
+          }
         }
       });
     });
@@ -305,10 +560,10 @@
         }
       });
     });
-    return socket.on('playTorrent', function(magnet, fn) {
+    socket.on('playTorrent', function(data, fn) {
       tv.emit('loading');
-      if ((magnet != null) && magnet.length > 0) {
-        return readTorrent(magnet, function(err, torrent) {
+      if ((data.magnet != null) && data.magnet.length > 0) {
+        return readTorrent(data.magnet, function(err, torrent) {
           if (err) {
             tv.emit('main');
             return fn({
@@ -327,11 +582,83 @@
               buffer: (1.5 * 1024 * 1024).toString()
             });
             torrentStream.server.on('listening', function() {
-              var port;
+              var filenameReg, match, options, port, query;
               port = torrentStream.server.address().port;
               statePlaying = true;
-              omx.start('http://127.0.0.1:' + port + '/');
-              return tv.emit('black');
+              titlePlaying = data.title;
+              options = {};
+              options.input = 'http://127.0.0.1:' + port + '/';
+              if (isSubtitleEnabled() && (data.movie != null)) {
+                return rimraf(__dirname + '/subtitles', function() {
+                  return fs.mkdir(__dirname + '/subtitles', function() {
+                    return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
+                      if (result.success) {
+                        options.subtitle = result.path;
+                        return omx.player.start(options);
+                      } else {
+                        if (result.requesterr) {
+                          return downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
+                            if (result.success) {
+                              options.subtitle = result.path;
+                              return omx.player.start(options);
+                            } else {
+                              return downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
+                                if (result.success) {
+                                  options.subtitle = result.path;
+                                  return omx.player.start(options);
+                                } else {
+                                  remote.emit('error', "No subtitles found! Playing without...");
+                                  return omx.player.start(options);
+                                }
+                              });
+                            }
+                          });
+                        } else {
+                          return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
+                            if (result.success) {
+                              options.subtitle = result.path;
+                              return omx.player.start(options);
+                            } else {
+                              remote.emit('error', "No subtitles found! Playing without...");
+                              return omx.player.start(options);
+                            }
+                          });
+                        }
+                      }
+                    });
+                  });
+                });
+              } else if (isSubtitleEnabled() && (data.episode != null)) {
+                filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig;
+                query = {
+                  imdbid: data.episode.imdb_id,
+                  season: data.episode.season,
+                  episode: data.episode.episode
+                };
+                try {
+                  match = filenameReg.exec(data.magnet);
+                  if (match != null) {
+                    query.filename = match[1];
+                  }
+                } catch (_error) {
+                  console.log('Could not extract filename!');
+                }
+                return rimraf(__dirname + '/subtitles', function() {
+                  return fs.mkdir(__dirname + '/subtitles', function() {
+                    return downloadSeriesSubtitle(query, function(result) {
+                      if (result.success) {
+                        options.subtitle = result.path;
+                        return omx.player.start(options);
+                      } else {
+                        remote.emit('error', "No subtitles found! Playing without...");
+                        return omx.player.start(options);
+                      }
+                    });
+                  });
+                });
+              } else {
+                return omx.player.start(options);
+              }
             });
             return fn({
               success: true
@@ -346,6 +673,63 @@
         });
       }
     });
+    socket.on('getState', function(fn) {
+      return fn({
+        playing: statePlaying,
+        title: titlePlaying
+      });
+    });
+    socket.on('getSettings', function(fn) {
+      return store.get('settings', function(err, val) {
+        if (err) {
+          return fn({
+            success: false
+          });
+        } else {
+          return fn({
+            success: true,
+            settings: val
+          });
+        }
+      });
+    });
+    socket.on('setSettings', function(data, fn) {
+      return store.set('settings', data, function(err) {
+        if (err) {
+          return fn({
+            success: false
+          });
+        } else {
+          settings = data;
+          return fn({
+            success: true
+          });
+        }
+      });
+    });
+    socket.on('shutdown', function(data, fn) {
+      return childProcess.exec('poweroff', function(error, stdout, stderr) {
+        return console.log('Bye!');
+      });
+    });
+    return socket.on('reboot', function(data, fn) {
+      return childProcess.exec('reboot', function(error, stdout, stderr) {
+        return console.log('Bye!');
+      });
+    });
+  });
+
+  omx.emitter.on('stop', function() {
+    return childProcess.exec('xrefresh -display :0', function(error, stdout, stderr) {
+      remote.emit('stateStop');
+      if (error != null) {
+        return console.log("Could not give PiTV the authority back!");
+      }
+    });
+  });
+
+  omx.emitter.on('complete', function() {
+    return remote.emit('statePlaying', titlePlaying);
   });
 
 }).call(this);

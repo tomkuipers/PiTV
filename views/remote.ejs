@@ -19,6 +19,7 @@
       <li><a href="#/youtube"><i class="fa fa-youtube-play fa-lg"></i> YouTube</a></li>
       <li><a href="#/gaming"><i class="fa fa-gamepad fa-lg"></i> Gaming</a></li>
       <li><a href="#/homecontrol"><i class="fa fa-home fa-lg"></i> Home Control</a></li>
+      <li><a href="#/settings"><i class="fa fa-cogs fa-lg"></i> Settings</a></li>
     </ul>
   </header>
 
@@ -60,7 +61,7 @@
   <article id="episode">
     <div class="pad">
       <div class="movie">
-        <img class="poster" id="episodePoster">
+        <!-- <img class="poster" id="episodePoster"> -->
         <div class="text">
           <h1 id="episodeTitle"></h1>
           <br>
@@ -94,6 +95,80 @@
       </div>
     </div>
   </article>
+  <article id="settings">
+    <div class="pad">
+      <ul class="settings">
+        <li>
+          <label class="label-switch">
+            <input type="checkbox" id="setting-use-subtitles">
+            <div class="checkbox"></div>
+          </label>
+          <h4>Enable Subtitles</h4>
+        </li>
+        <li>
+          <div class="select">
+            <select id="setting-subtitle-lang">
+              <option value="" disabled="disabled">Choose a subtitle language</option>
+              <option value="albanian">Albanian</option>
+              <option value="arabic">Arabic</option>
+              <option value="bengali">Bengali</option>
+              <option value="brazilian-portuguese">Brazilian Portuguese</option>
+              <option value="bulgarian">Bulgarian</option>
+              <option value="chinese">Chinese</option>
+              <option value="croatian">Croatian</option>
+              <option value="czech">Czech</option>
+              <option value="danish">Danish</option>
+              <option value="dutch">Dutch</option>
+              <option value="english">English</option>
+              <option value="farsi-persian">Farsi/Persian</option>
+              <option value="finnish">Finnish</option>
+              <option value="french">French</option>
+              <option value="german">German</option>
+              <option value="greek">Greek</option>
+              <option value="hebrew">Hebrew</option>
+              <option value="hungarian">Hungarian</option>
+              <option value="indonesian">Indonesian</option>
+              <option value="italian">Italian</option>
+              <option value="japanese">Japanese</option>
+              <option value="korean">Korean</option>
+              <option value="lithuanian">Lithuanian</option>
+              <option value="macedonian">Macedonian</option>
+              <option value="malay">Malay</option>
+              <option value="norwegian">Norwegian</option>
+              <option value="polish">Polish</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="romanian">Romanian</option>
+              <option value="russian">Russian</option>
+              <option value="serbian">Serbian</option>
+              <option value="slovenian">Slovenian</option>
+              <option value="spanish">Spanish</option>
+              <option value="swedish">Swedish</option>
+              <option value="thai">Thai</option>
+              <option value="turkish">Turkish</option>
+              <option value="urdu">Urdu</option>
+              <option value="vietnamese">Vietnamese</option>
+            </select>
+            <i class="fa fa-caret-down fa-lg"></i>
+          </div>
+        </li>
+        <li>
+          <div class="button">
+            <a href="javascript:saveSettings()">Save Settings</a>
+          </div>
+        </li>
+        <li>
+          <div class="button">
+            <a href="javascript:reboot()">Reboot System</a>
+          </div>
+        </li>
+        <li>
+          <div class="button">
+            <a href="javascript:shutdown()">Shutdown System</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </article>
   <article id="start">
     <h1 class="title">PiTV</h1>
   </article>
@@ -114,6 +189,16 @@
     </a>
     <span id="media-title"></span>
   </footer>
+
+  <div class="alert" style="display:none" id="alert">
+    <div class="window">
+      <h1><i class="fa fa-exclamation-triangle"></i> An error occured!</h1>
+      <p id="alert-message"></p>
+      <a href="javascript:closeAlert()">
+        <i class="fa fa-check-circle-o"></i>
+      </a>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/static/js/remote.js"></script>
