@@ -160,31 +160,25 @@
       } else {
         langcode = convertLanguageCode(lang);
         if (langcode != null) {
-          if (res.success) {
-            subtitle = res.result[langcode];
-            if (subtitle != null) {
-              out = fs.createWriteStream(__dirname + '/subtitles/subtitle.srt');
-              req = request({
-                method: 'GET',
-                uri: subtitle.url
-              });
-              req.pipe(out);
-              req.on('error', function() {
-                return cb({
-                  success: false
-                });
-              });
-              return req.on('end', function() {
-                return cb({
-                  success: true,
-                  path: __dirname + '/subtitles/subtitle.srt'
-                });
-              });
-            } else {
+          subtitle = res[langcode];
+          if (subtitle != null) {
+            out = fs.createWriteStream(__dirname + '/subtitles/subtitle.srt');
+            req = request({
+              method: 'GET',
+              uri: subtitle.url
+            });
+            req.pipe(out);
+            req.on('error', function() {
               return cb({
                 success: false
               });
-            }
+            });
+            return req.on('end', function() {
+              return cb({
+                success: true,
+                path: __dirname + '/subtitles/subtitle.srt'
+              });
+            });
           } else {
             return cb({
               success: false

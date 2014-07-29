@@ -31,16 +31,16 @@ omx.stop = function(cb) {
 omx.start = function(fn) {
     if (!pipe) {
         pipe = '/tmp/omxcontrol';
-        exec('rm -f '+pipe, function (error, stdout, stderr) {
+        exec('rm -f ' + pipe, function (error, stdout, stderr) {
             if (error !== null) {
                 console.error('rm exec error: ' + error);
             } else {
-                exec('mkfifo '+pipe, function (error, stdout, stderr) {
+                exec('mkfifo ' + pipe, function (error, stdout, stderr) {
                     if (error !== null) {
                         console.error('mkfifo exec error: ' + error);
                     } else {
                         if (map) {
-                            map(fn,cb);
+                            map(fn, cb);
                         } else {
                             cb(fn);
                         }
@@ -57,7 +57,11 @@ omx.start = function(fn) {
 
     function cb(fn) {
         console.info(fn);
-        exec('omxplayer -o hdmi "'+fn+'" < '+pipe, function (error, stdout, stderr) {
+        var insert = '';
+        if (fn.subtitle != null) {
+            insert = ' --subtitles "' + fn.subtitle + '"';
+        }
+        exec('omxplayer -o hdmi --blank' + insert + ' "' + fn.input + '" < ' + pipe, function (error, stdout, stderr) {
             if (error !== null) {
               console.error('omxplayer exec error: ' + error);
               emitter.emit('stop', error);

@@ -84,24 +84,20 @@ downloadSeriesSubtitle = (query, cb) ->
     else
       langcode = convertLanguageCode lang
       if langcode?
-        if res.success
-          subtitle = res.result[langcode]
-          if subtitle?
-            out = fs.createWriteStream __dirname + '/subtitles/subtitle.srt'
-            req = request
-              method: 'GET',
-              uri: subtitle.url
-            req.pipe out
-            req.on 'error', ->
-              cb
-                success: false
-            req.on 'end', ->
-              cb
-                success: true
-                path: __dirname + '/subtitles/subtitle.srt'
-          else
+        subtitle = res[langcode]
+        if subtitle?
+          out = fs.createWriteStream __dirname + '/subtitles/subtitle.srt'
+          req = request
+            method: 'GET',
+            uri: subtitle.url
+          req.pipe out
+          req.on 'error', ->
             cb
               success: false
+          req.on 'end', ->
+            cb
+              success: true
+              path: __dirname + '/subtitles/subtitle.srt'
         else
           cb
             success: false
