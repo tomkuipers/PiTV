@@ -340,7 +340,9 @@ function playMovieTorrent(i) {
   var options = {
     magnet: movieTorrents[i].TorrentMagnetUrl,
     title: movie.original_title,
-    imdb_id: movie.imdb_id
+    movie: {
+      imdb_id: movie.imdb_id
+    }
   };
   socket.emit('playTorrent', options, function(result) {});
 }
@@ -349,7 +351,11 @@ function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
   var options = {
     magnet: magnet,
     title: (serieName + ' S' + seasonNumber + ' E' + episodeNumber),
-    imdb_id: episode.imdb_id
+    episode: {
+      imdb_id: episode.imdb_id,
+      season: seasonNumber.toString(),
+      episode: episodeNumber.toString()
+    }
   };
   socket.emit('playTorrent', options, function(result) {});
 }

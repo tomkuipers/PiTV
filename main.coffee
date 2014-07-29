@@ -14,6 +14,7 @@ rimraf = require 'rimraf'
 fsstore = require 'fs-memory-store'
 request = require 'request'
 admzip = require 'adm-zip'
+opensrt = require 'opensrt_js'
 store = new fsstore(__dirname + '/store')
 moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a')
 tempDir = require('os').tmpdir()
@@ -31,6 +32,82 @@ server.listen 80
 store.get 'settings', (err, val) ->
   if err is null
     settings = val
+
+convertLanguageCode = (input) ->
+  switch input
+    when "albanian" then "al"
+    when "arabic" then "ar"
+    when "bengali" then "bn"
+    when "brazilian-portuguese" then "pt"
+    when "bulgarian" then "bg"
+    when "chinese" then "zh"
+    when "croatian" then "hr"
+    when "czech" then "cs"
+    when "danish" then "da"
+    when "dutch" then "nl"
+    when "english" then "en"
+    when "farsi-persian" then "fa"
+    when "finnish" then "fi"
+    when "french" then "fr"
+    when "german" then "de"
+    when "greek" then "el"
+    when "hebrew" then "he"
+    when "hungarian" then "hu"
+    when "indonesian" then "id"
+    when "italian" then "it"
+    when "japanese" then "ja"
+    when "korean" then "ko"
+    when "lithuanian" then "lt"
+    when "macedonian" then "mk"
+    when "malay" then "ms"
+    when "norwegian" then "no"
+    when "polish" then "pl"
+    when "portugese" then "pt"
+    when "romanian" then "ro"
+    when "russian" then "ru"
+    when "serbian" then "sr"
+    when "slovenian" then "sl"
+    when "spanish" then "es"
+    when "swedish" then "sv"
+    when "thai" then "th"
+    when "turkish" then "tr"
+    when"urdu" then "ur"
+    when "vietnamese" then "vi"
+    else null
+
+downloadSeriesSubtitle = (query, cb) ->
+  lang = subtitleLanguage()
+  opensrt.searchEpisode query, (err, res) ->
+    if err
+      cb
+        success: false
+    else
+      langcode = convertLanguageCode lang
+      if langcode?
+        if res.success
+          subtitle = res.result[langcode]
+          if subtitle?
+            out = fs.createWriteStream __dirname + '/subtitles/subtitle.srt'
+            req = request
+              method: 'GET',
+              uri: subtitle.url
+            req.pipe out
+            req.on 'error', ->
+              cb
+                success: false
+            req.on 'end', ->
+              cb
+                success: true
+                path: __dirname + '/subtitles/subtitle.srt'
+          else
+            cb
+              success: false
+        else
+          cb
+            success: false
+      else
+        cb
+          success: false
 
 downloadSubtitle = (imdb_id, baseurl, cb) ->
   lang = subtitleLanguage()
@@ -308,8 +385,7 @@ remote.on 'connection', (socket) ->
             titlePlaying = data.title
             options = {}
             options.input = 'http://127.0.0.1:' + port + '/'
-
-            if isSubtitleEnabled() and data.imdb_id?
+            if isSubtitleEnabled() and data.movie?
               rimraf __dirname + '/subtitles', ->
                 fs.mkdir __dirname + '/subtitles', ->
                   downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
@@ -323,25 +399,33 @@ remote.on 'connection', (socket) ->
                             options.subtitle = result.path
                             omx.player.start options
                           else
-                            for i in [0...1]
-                              downloadSubtitle data.imdb_id, 'ysubs.com', (result) ->
-                                if result.success
-                                  options.subtitle = result.path
-                                  omx.player.start options
-                                  i = 2
-                                else
-                                  if i == 1
-                                    omx.player.start options
-                      else
-                        for i in [0...1]
-                          downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
-                            if result.success
-                              options.subtitle = result.path
-                              omx.player.start options
-                              i = 2
-                            else
-                              if i == 1
+                            downloadSubtitle data.imdb_id, 'ysubs.com', (result) ->
+                              if result.success
+                                options.subtitle = result.path
                                 omx.player.start options
+                              else
+                                omx.player.start options
+                      else
+                        downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
+                          if result.success
+                            options.subtitle = result.path
+                            omx.player.start options
+                          else
+                            omx.player.start options
+            else if isSubtitleEnabled() and data.episode?
+              filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig
+              match = filenameReg.exec data.magnet
+              query =
+                imdbid: data.episode.imdb_id
+                season: data.episode.season
+                episode: data.episode.episode
+                filename: match[1]
+              downloadSeriesSubtitle query, (err, result) ->
+                if result.success
+                  options.subtitle = result.path
+                  omx.player.start options
+                else
+                  omx.player.start options
             else
               omx.player.start options
           fn

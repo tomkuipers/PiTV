@@ -5,7 +5,6 @@
   "private": false,
   "dependencies": {
     "express": "~4.2.0",
-    "omxcontrol":"*",
     "body-parser": "*",
     "method-override": "*",
     "ejs": "*",

@@ -1,5 +1,5 @@
 (function() {
-  var admzip, app, bodyParser, childProcess, clearTempFiles, createTempFilename, downloadSubtitle, express, fs, fsstore, http, io, isSubtitleEnabled, methodOverride, moviedb, omx, path, peerflix, readTorrent, remote, request, rimraf, server, settings, statePlaying, store, subtitleLanguage, tempDir, titlePlaying, torrentStream, tpb, tv, urltool, uuid;
+  var admzip, app, bodyParser, childProcess, clearTempFiles, convertLanguageCode, createTempFilename, downloadSeriesSubtitle, downloadSubtitle, express, fs, fsstore, http, io, isSubtitleEnabled, methodOverride, moviedb, omx, opensrt, path, peerflix, readTorrent, remote, request, rimraf, server, settings, statePlaying, store, subtitleLanguage, tempDir, titlePlaying, torrentStream, tpb, tv, urltool, uuid;
 
   bodyParser = require('body-parser');
 
@@ -33,6 +33,8 @@
 
   admzip = require('adm-zip');
 
+  opensrt = require('opensrt_js');
+
   store = new fsstore(__dirname + '/store');
 
   moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a');
@@ -62,6 +64,140 @@
       return settings = val;
     }
   });
+
+  convertLanguageCode = function(input) {
+    switch (input) {
+      case "albanian":
+        return "al";
+      case "arabic":
+        return "ar";
+      case "bengali":
+        return "bn";
+      case "brazilian-portuguese":
+        return "pt";
+      case "bulgarian":
+        return "bg";
+      case "chinese":
+        return "zh";
+      case "croatian":
+        return "hr";
+      case "czech":
+        return "cs";
+      case "danish":
+        return "da";
+      case "dutch":
+        return "nl";
+      case "english":
+        return "en";
+      case "farsi-persian":
+        return "fa";
+      case "finnish":
+        return "fi";
+      case "french":
+        return "fr";
+      case "german":
+        return "de";
+      case "greek":
+        return "el";
+      case "hebrew":
+        return "he";
+      case "hungarian":
+        return "hu";
+      case "indonesian":
+        return "id";
+      case "italian":
+        return "it";
+      case "japanese":
+        return "ja";
+      case "korean":
+        return "ko";
+      case "lithuanian":
+        return "lt";
+      case "macedonian":
+        return "mk";
+      case "malay":
+        return "ms";
+      case "norwegian":
+        return "no";
+      case "polish":
+        return "pl";
+      case "portugese":
+        return "pt";
+      case "romanian":
+        return "ro";
+      case "russian":
+        return "ru";
+      case "serbian":
+        return "sr";
+      case "slovenian":
+        return "sl";
+      case "spanish":
+        return "es";
+      case "swedish":
+        return "sv";
+      case "thai":
+        return "th";
+      case "turkish":
+        return "tr";
+      case "urdu":
+        return "ur";
+      case "vietnamese":
+        return "vi";
+      default:
+        return null;
+    }
+  };
+
+  downloadSeriesSubtitle = function(query, cb) {
+    var lang;
+    lang = subtitleLanguage();
+    return opensrt.searchEpisode(query, function(err, res) {
+      var langcode, out, req, subtitle;
+      if (err) {
+        return cb({
+          success: false
+        });
+      } else {
+        langcode = convertLanguageCode(lang);
+        if (langcode != null) {
+          if (res.success) {
+            subtitle = res.result[langcode];
+            if (subtitle != null) {
+              out = fs.createWriteStream(__dirname + '/subtitles/subtitle.srt');
+              req = request({
+                method: 'GET',
+                uri: subtitle.url
+              });
+              req.pipe(out);
+              req.on('error', function() {
+                return cb({
+                  success: false
+                });
+              });
+              return req.on('end', function() {
+                return cb({
+                  success: true,
+                  path: __dirname + '/subtitles/subtitle.srt'
+                });
+              });
+            } else {
+              return cb({
+                success: false
+              });
+            }
+          } else {
+            return cb({
+              success: false
+            });
+          }
+        } else {
+          return cb({
+            success: false
+          });
+        }
+      }
+    });
+  };
 
   downloadSubtitle = function(imdb_id, baseurl, cb) {
     var lang;
@@ -452,65 +588,66 @@
               buffer: (1.5 * 1024 * 1024).toString()
             });
             torrentStream.server.on('listening', function() {
-              var options, port;
+              var filenameReg, match, options, port, query;
               port = torrentStream.server.address().port;
               statePlaying = true;
               titlePlaying = data.title;
               options = {};
               options.input = 'http://127.0.0.1:' + port + '/';
-              if (isSubtitleEnabled() && (data.imdb_id != null)) {
+              if (isSubtitleEnabled() && (data.movie != null)) {
                 return rimraf(__dirname + '/subtitles', function() {
                   return fs.mkdir(__dirname + '/subtitles', function() {
                     return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
-                      var i, _i, _results;
                       if (result.success) {
                         options.subtitle = result.path;
                         return omx.player.start(options);
                       } else {
                         if (result.requesterr) {
                           return downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
-                            var i, _i, _results;
                             if (result.success) {
                               options.subtitle = result.path;
                               return omx.player.start(options);
                             } else {
-                              _results = [];
-                              for (i = _i = 0; _i < 1; i = ++_i) {
-                                _results.push(downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
-                                  if (result.success) {
-                                    options.subtitle = result.path;
-                                    omx.player.start(options);
-                                    return i = 2;
-                                  } else {
-                                    if (i === 1) {
-                                      return omx.player.start(options);
-                                    }
-                                  }
-                                }));
-                              }
-                              return _results;
+                              return downloadSubtitle(data.imdb_id, 'ysubs.com', function(result) {
+                                if (result.success) {
+                                  options.subtitle = result.path;
+                                  return omx.player.start(options);
+                                } else {
+                                  return omx.player.start(options);
+                                }
+                              });
                             }
                           });
                         } else {
-                          _results = [];
-                          for (i = _i = 0; _i < 1; i = ++_i) {
-                            _results.push(downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
-                              if (result.success) {
-                                options.subtitle = result.path;
-                                omx.player.start(options);
-                                return i = 2;
-                              } else {
-                                if (i === 1) {
-                                  return omx.player.start(options);
-                                }
-                              }
-                            }));
-                          }
-                          return _results;
+                          return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
+                            if (result.success) {
+                              options.subtitle = result.path;
+                              return omx.player.start(options);
+                            } else {
+                              return omx.player.start(options);
+                            }
+                          });
                         }
                       }
                     });
                   });
+                });
+              } else if (isSubtitleEnabled() && (data.episode != null)) {
+                filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig;
+                match = filenameReg.exec(data.magnet);
+                query = {
+                  imdbid: data.episode.imdb_id,
+                  season: data.episode.season,
+                  episode: data.episode.episode,
+                  filename: match[1]
+                };
+                return downloadSeriesSubtitle(query, function(err, result) {
+                  if (result.success) {
+                    options.subtitle = result.path;
+                    return omx.player.start(options);
+                  } else {
+                    return omx.player.start(options);
+                  }
                 });
               } else {
                 return omx.player.start(options);
