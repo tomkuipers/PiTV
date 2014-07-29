@@ -1,6 +1,6 @@
 bodyParser = require 'body-parser'
 methodOverride = require 'method-override'
-omx = require 'omxcontrol'
+omx = require './omxcontrol.js'
 readTorrent = require 'read-torrent'
 peerflix = require 'peerflix'
 uuid = require 'node-uuid'
@@ -14,7 +14,7 @@ rimraf = require 'rimraf'
 fsstore = require 'fs-memory-store'
 request = require 'request'
 admzip = require 'adm-zip'
-opensrt = require 'opensrt_js'
+opensrt = require './opensrt.js'
 store = new fsstore(__dirname + '/store')
 moviedb = require('moviedb')('c2c73ebd1e25cbc29cf61158c04ad78a')
 tempDir = require('os').tmpdir()

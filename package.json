@@ -16,7 +16,9 @@
     "fs-memory-store": "*",
     "request": "*",
     "adm-zip": "*",
-    "rimraf": "*"
+    "rimraf": "*",
+    "xmlrpc": "*",
+    "async": "*"
   },
   "author": {
     "name": "Phil Plückthun",

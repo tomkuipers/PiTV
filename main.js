@@ -5,7 +5,7 @@
 
   methodOverride = require('method-override');
 
-  omx = require('omxcontrol');
+  omx = require('./omxcontrol.js');
 
   readTorrent = require('read-torrent');
 
@@ -33,7 +33,7 @@
 
   admzip = require('adm-zip');
 
-  opensrt = require('opensrt_js');
+  opensrt = require('./opensrt.js');
 
   store = new fsstore(__dirname + '/store');
 
