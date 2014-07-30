@@ -3,7 +3,6 @@ methodOverride = require 'method-override'
 omx = require './omxcontrol.js'
 readTorrent = require 'read-torrent'
 peerflix = require 'peerflix'
-uuid = require 'node-uuid'
 path = require 'path'
 http = require 'http'
 urltool = require 'url'
@@ -29,7 +28,13 @@ settings = {}
 server.listen 80
 
 store.get 'settings', (err, val) ->
-  if err is null
+  if err?
+    settings =
+      subtitleLanguage: ''
+      noSeeding: false
+    store.set 'settings', settings (err) ->
+      console.log 'Set to standard settings'
+  else
     settings = val
 
 convertLanguageCode = (input) ->
@@ -61,7 +66,7 @@ convertLanguageCode = (input) ->
     when "malay" then "ms"
     when "norwegian" then "no"
     when "polish" then "pl"
-    when "portugese" then "pt"
+    when "portuguese" then "pt"
     when "romanian" then "ro"
     when "russian" then "ru"
     when "serbian" then "sr"
@@ -76,6 +81,9 @@ convertLanguageCode = (input) ->
 
 downloadSeriesSubtitle = (query, cb) ->
   lang = subtitleLanguage()
+  if lang is null
+    cb
+      success: false
   opensrt.searchEpisode query, (err, res) ->
     if err
       cb
@@ -107,7 +115,7 @@ downloadSeriesSubtitle = (query, cb) ->
 downloadSubtitle = (imdb_id, baseurl, cb) ->
   lang = subtitleLanguage()
   request 'http://api.' + baseurl + '/subs/' + imdb_id, (err, res, body) ->
-    if err
+    if err or body is null
       cb
         success: false
         requesterr: true
@@ -126,7 +134,7 @@ downloadSubtitle = (imdb_id, baseurl, cb) ->
             out = fs.createWriteStream __dirname + '/subtitles/subtitle.zip'
             req = request
               method: 'GET',
-              uri: 'http://yifysubtitles.com' + bestSub.url.replace('\\','')
+              uri: 'http://' + baseurl + '.com' + bestSub.url.replace('\\','')
             req.pipe out
             req.on 'error', ->
               cb
@@ -160,8 +168,10 @@ downloadSubtitle = (imdb_id, baseurl, cb) ->
         cb
           success: false
 
-createTempFilename = ->
-  path.join tempDir, 'torrentcast_' + uuid.v4()
+createTempFilename = (title) ->
+  name = title.toLowerCase()
+  name = name.replace ' ', '_'
+  path.join tempDir, 'torrentcast_' + name
 
 clearTempFiles = ->
   fs.readdir tempDir, (err, files) ->
@@ -170,17 +180,11 @@ clearTempFiles = ->
         if file.substr 0, 11 is 'torrentcast'
           fs.rmdir path.join tempDir, file
 
-isSubtitleEnabled = ->
-  if settings.subtitles?
-    settings.subtitles
-  else
-    false
-
 subtitleLanguage = ->
   if settings.subtitleLanguage?
     settings.subtitleLanguage
   else
-    ""
+    null
 
 app.use bodyParser.urlencoded
   extended: true
@@ -369,10 +373,15 @@ remote.on 'connection', (socket) ->
           torrentStream = null
           clearTempFiles()
 
+          seederSlots = 5
+          if settings.noSeeding
+            seederSlots = 0
+
           torrentStream = peerflix torrent,
             connections: 100
-            path: createTempFilename()
+            path: createTempFilename data.title
             buffer: (1.5 * 1024 * 1024).toString()
+            uploads: seederSlots
 
           torrentStream.server.on 'listening', ->
             port = torrentStream.server.address().port
@@ -380,7 +389,8 @@ remote.on 'connection', (socket) ->
             titlePlaying = data.title
             options = {}
             options.input = 'http://127.0.0.1:' + port + '/'
-            if isSubtitleEnabled() and data.movie?
+            subtitleSetting = subtitleLanguage()
+            if subtitleSetting? and subtitleSetting.length > 0 and data.movie?
               rimraf __dirname + '/subtitles', ->
                 fs.mkdir __dirname + '/subtitles', ->
                   downloadSubtitle data.imdb_id, 'yifysubtitles.com', (result) ->
@@ -409,7 +419,7 @@ remote.on 'connection', (socket) ->
                           else
                             remote.emit 'error', "No subtitles found! Playing without..."
                             omx.player.start options
-            else if isSubtitleEnabled() and data.episode?
+            else if subtitleSetting? and subtitleSetting.length > 0 and data.episode?
               filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig
               query =
                 imdbid: data.episode.imdb_id

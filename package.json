@@ -1,6 +1,7 @@
 {
   "name": "PiTV",
-  "version": "0.0.1",
+  "description": "Make your TV a smarter TV - with torrenting!",
+  "version": "0.0.2.1",
   "homepage": "http://pitv.pw",
   "private": false,
   "dependencies": {
@@ -10,7 +11,6 @@
     "ejs": "*",
     "read-torrent": "*",
     "peerflix": "*",
-    "node-uuid": "*",
     "socket.io": "*",
     "moviedb": "*",
     "fs-memory-store": "*",
