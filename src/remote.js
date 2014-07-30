@@ -84,12 +84,12 @@ $('#searchSeries').submit(function(e) {
 });
 
 function throwAlert(msg) {
-  $('alert-message').html(msg);
-  $('alert').show();
+  $('#alert-message').html(msg);
+  $('#alert').show();
 }
 
 function closeAlert() {
-  $('alert').hide();
+  $('#alert').hide();
 }
 
 function loadSeries() {
@@ -593,6 +593,7 @@ socket.on('stateStop', function() {
   $('#media-title').html('');
 });
 socket.on('error', function(msg) {
+  console.log('Error: ' + msg);
   throwAlert(msg);
 });
 socket.on('connect', function() {

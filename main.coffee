@@ -231,18 +231,6 @@ remote.on 'connection', (socket) ->
       if torrentStream
         torrentStream.swarm.resume()
     omx.player.pause()
-  socket.on 'searchEpisodeTorrents', (string, fn) ->
-    tpb.search string,
-      category: '205'
-    , (err, results) ->
-      if err
-        fn
-          success: false
-          error: 'No torrents found!'
-      else
-        fn
-          success: true
-          torrents: results
   socket.on 'searchMovieTorrents', (imdbid, fn) ->
     url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid
     request url, (err, res, body) ->

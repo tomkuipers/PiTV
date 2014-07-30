@@ -377,23 +377,6 @@
       }
       return omx.player.pause();
     });
-    socket.on('searchEpisodeTorrents', function(string, fn) {
-      return tpb.search(string, {
-        category: '205'
-      }, function(err, results) {
-        if (err) {
-          return fn({
-            success: false,
-            error: 'No torrents found!'
-          });
-        } else {
-          return fn({
-            success: true,
-            torrents: results
-          });
-        }
-      });
-    });
     socket.on('searchMovieTorrents', function(imdbid, fn) {
       var url;
       url = 'http://yts.re/api/listimdb.json?imdb_id=' + imdbid;
