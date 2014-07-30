@@ -399,7 +399,7 @@ function playEpisodeTorrent(serieName, seasonNumber, episodeNumber, magnet) {
 
 function saveSettings() {
   data = {};
-  data.subtitles = $('#setting-use-subtitles').prop("checked");
+  data.noSeeding = $('#setting-no-seeding').prop("checked");
   data.subtitleLanguage = $('#setting-subtitle-lang').val();
   $('#loadingRemote').show();
   socket.emit('setSettings', data, function(result) {
@@ -562,28 +562,18 @@ riot.route(function(hash) {
         fetchSeries();
       }
     }
-  } else if (hash[1] === 'youtube') {
-
-  } else if (hash[1] === 'gaming') {
-
-  } else if (hash[1] === 'homecontrol') {
-
   } else if (hash[1] === 'settings') {
     $('#loadingRemote').show();
     socket.emit('getSettings', function(result) {
       if (result.success) {
         if (result.settings == null) {
           result.settings = {};
-          result.settings.subtitles = false;
           result.settings.subtitleLanguage = '';
-        }
-        if (result.settings.subtitles == null) {
-          result.settings.subtitles = false;
         }
         if (result.settings.subtitleLanguage == null) {
           result.settings.subtitleLanguage = '';
         }
-        $('#setting-use-subtitles').prop("checked", result.settings.subtitles);
+        // $('#setting-use-subtitles').prop("checked", result.settings.subtitles);
         $('#setting-subtitle-lang').val(result.settings.subtitleLanguage);
         $('#settings').show();
         $('#loadingRemote').hide();

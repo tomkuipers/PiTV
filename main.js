@@ -1,5 +1,5 @@
 (function() {
-  var admzip, app, bodyParser, childProcess, clearTempFiles, convertLanguageCode, createTempFilename, downloadSeriesSubtitle, downloadSubtitle, express, fs, fsstore, http, io, isSubtitleEnabled, methodOverride, moviedb, omx, opensrt, path, peerflix, readTorrent, remote, request, rimraf, server, settings, statePlaying, store, subtitleLanguage, tempDir, titlePlaying, torrentStream, tpb, tv, urltool, uuid;
+  var admzip, app, bodyParser, childProcess, clearTempFiles, convertLanguageCode, createTempFilename, downloadSeriesSubtitle, downloadSubtitle, express, fs, fsstore, http, io, methodOverride, moviedb, omx, opensrt, path, peerflix, readTorrent, remote, request, rimraf, server, settings, statePlaying, store, subtitleLanguage, tempDir, titlePlaying, torrentStream, tv, urltool;
 
   bodyParser = require('body-parser');
 
@@ -10,8 +10,6 @@
   readTorrent = require('read-torrent');
 
   peerflix = require('peerflix');
-
-  uuid = require('node-uuid');
 
   path = require('path');
 
@@ -58,7 +56,15 @@
   server.listen(80);
 
   store.get('settings', function(err, val) {
-    if (err === null) {
+    if (err != null) {
+      settings = {
+        subtitleLanguage: '',
+        noSeeding: false
+      };
+      return store.set('settings', settings(function(err) {
+        return console.log('Set to standard settings');
+      }));
+    } else {
       return settings = val;
     }
   });
@@ -119,7 +125,7 @@
         return "no";
       case "polish":
         return "pl";
-      case "portugese":
+      case "portuguese":
         return "pt";
       case "romanian":
         return "ro";
@@ -149,6 +155,11 @@
   downloadSeriesSubtitle = function(query, cb) {
     var lang;
     lang = subtitleLanguage();
+    if (lang === null) {
+      cb({
+        success: false
+      });
+    }
     return opensrt.searchEpisode(query, function(err, res) {
       var langcode, out, req, subtitle;
       if (err) {
@@ -196,7 +207,7 @@
     lang = subtitleLanguage();
     return request('http://api.' + baseurl + '/subs/' + imdb_id, function(err, res, body) {
       var bestSub, bestSubRating, out, req, result, sub, subs, _i, _len;
-      if (err) {
+      if (err || body === null) {
         return cb({
           success: false,
           requesterr: true
@@ -219,7 +230,7 @@
               out = fs.createWriteStream(__dirname + '/subtitles/subtitle.zip');
               req = request({
                 method: 'GET',
-                uri: 'http://yifysubtitles.com' + bestSub.url.replace('\\', '')
+                uri: 'http://' + baseurl + '.com' + bestSub.url.replace('\\', '')
               });
               req.pipe(out);
               req.on('error', function() {
@@ -275,8 +286,11 @@
     });
   };
 
-  createTempFilename = function() {
-    return path.join(tempDir, 'torrentcast_' + uuid.v4());
+  createTempFilename = function(title) {
+    var name;
+    name = title.toLowerCase();
+    name = name.replace(' ', '_');
+    return path.join(tempDir, 'torrentcast_' + name);
   };
 
   clearTempFiles = function() {
@@ -291,19 +305,11 @@
     });
   };
 
-  isSubtitleEnabled = function() {
-    if (settings.subtitles != null) {
-      return settings.subtitles;
-    } else {
-      return false;
-    }
-  };
-
   subtitleLanguage = function() {
     if (settings.subtitleLanguage != null) {
       return settings.subtitleLanguage;
     } else {
-      return "";
+      return null;
     }
   };
 
@@ -562,6 +568,7 @@
       tv.emit('loading');
       if ((data.magnet != null) && data.magnet.length > 0) {
         return readTorrent(data.magnet, function(err, torrent) {
+          var seederSlots;
           if (err) {
             tv.emit('main');
             return fn({
@@ -574,19 +581,25 @@
             }
             torrentStream = null;
             clearTempFiles();
+            seederSlots = 5;
+            if (settings.noSeeding) {
+              seederSlots = 0;
+            }
             torrentStream = peerflix(torrent, {
               connections: 100,
-              path: createTempFilename(),
-              buffer: (1.5 * 1024 * 1024).toString()
+              path: createTempFilename(data.title),
+              buffer: (1.5 * 1024 * 1024).toString(),
+              uploads: seederSlots
             });
             torrentStream.server.on('listening', function() {
-              var filenameReg, match, options, port, query;
+              var filenameReg, match, options, port, query, subtitleSetting;
               port = torrentStream.server.address().port;
               statePlaying = true;
               titlePlaying = data.title;
               options = {};
               options.input = 'http://127.0.0.1:' + port + '/';
-              if (isSubtitleEnabled() && (data.movie != null)) {
+              subtitleSetting = subtitleLanguage();
+              if ((subtitleSetting != null) && subtitleSetting.length > 0 && (data.movie != null)) {
                 return rimraf(__dirname + '/subtitles', function() {
                   return fs.mkdir(__dirname + '/subtitles', function() {
                     return downloadSubtitle(data.imdb_id, 'yifysubtitles.com', function(result) {
@@ -626,7 +639,7 @@
                     });
                   });
                 });
-              } else if (isSubtitleEnabled() && (data.episode != null)) {
+              } else if ((subtitleSetting != null) && subtitleSetting.length > 0 && (data.episode != null)) {
                 filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig;
                 query = {
                   imdbid: data.episode.imdb_id,
