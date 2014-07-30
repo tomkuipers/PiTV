@@ -573,7 +573,7 @@ riot.route(function(hash) {
         if (result.settings.subtitleLanguage == null) {
           result.settings.subtitleLanguage = '';
         }
-        // $('#setting-use-subtitles').prop("checked", result.settings.subtitles);
+        $('#setting-no-seeding').prop("checked", result.settings.noSeeding);
         $('#setting-subtitle-lang').val(result.settings.subtitleLanguage);
         $('#settings').show();
         $('#loadingRemote').hide();
