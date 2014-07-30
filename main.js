@@ -214,7 +214,7 @@
         });
       } else {
         result = JSON.parse(body);
-        if (result.success) {
+        if (result.success && (result.subs != null) && result.subtitles > 0) {
           if (result.subs[imdb_id][lang] != null) {
             subs = result.subs[imdb_id][lang];
             bestSub = null;

@@ -121,7 +121,7 @@ downloadSubtitle = (imdb_id, baseurl, cb) ->
         requesterr: true
     else
       result = JSON.parse body
-      if result.success
+      if result.success and result.subs? and result.subtitles > 0
         if result.subs[imdb_id][lang]?
           subs = result.subs[imdb_id][lang]
           bestSub = null
