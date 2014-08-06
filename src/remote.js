@@ -26,6 +26,12 @@ var searchMoviesString = "";
 var moviesSearch = [];
 var seriesSearch = [];
 
+var logType = {
+  0: 'NOTE',
+  1: 'WARN',
+  2: 'ERRO'
+};
+
 $(window).scroll(function() {
   if ($(window).scrollTop() >= $(document).height() - $(window).height()) {
     if ($('#loadingRemote').css('display') === 'none' || $('#loadingRemote').css('display') === 'hidden') {
@@ -562,6 +568,22 @@ riot.route(function(hash) {
         fetchSeries();
       }
     }
+  } else if (hash[1] === 'log') {
+    $('#logList').html('');
+    $('#log').show();
+    $('#loadingRemote').show();
+    socket.emit('getLogs', function(result) {
+      if (result.success) {
+        var logBody = '';
+        for(var i = 0; i < result.logs.length; i++) {
+          var e = result.logs[i];
+          var time = new Date(e.time);
+          logBody += '<li>' + time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[e.type] + '] ' + e.msg + '</li>';
+        }
+        $('#logList').html(logBody);
+      }
+      $('#loadingRemote').hide();
+    });
   } else if (hash[1] === 'settings') {
     $('#loadingRemote').show();
     socket.emit('getSettings', function(result) {

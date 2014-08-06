@@ -16,6 +16,8 @@
     <ul id="navigation">
       <li><a href="#/movies"><i class="fa fa-film fa-lg"></i> Movies</a></li>
       <li><a href="#/series"><i class="fa fa-coffee fa-lg"></i> Series</a></li>
+      <li><a href="#/youtube"><i class="fa fa-youtube-play fa-lg"></i> YouTube</a></li>
+      <li><a href="#/homecontrol"><i class="fa fa-home fa-lg"></i> Home Control</a></li>
       <li><a href="#/settings"><i class="fa fa-cogs fa-lg"></i> Settings</a></li>
     </ul>
   </header>
@@ -31,7 +33,7 @@
   </form>
 
   <article id="series">
-    <ul id="seriesList">
+    <ul id="seriesList" class="cards">
     </ul>
   </article>
   <article id="serie">
@@ -72,7 +74,7 @@
     </div>
   </article>
   <article id="movies">
-    <ul id="moviesList">
+    <ul id="moviesList" class="cards">
     </ul>
   </article>
   <article id="movie">
@@ -90,6 +92,12 @@
           </div>
         </div>
       </div>
+    </div>
+  </article>
+  <article id="log">
+    <div class="pad">
+      <ul id="logList" class="log">
+      </ul>
     </div>
   </article>
   <article id="settings">
@@ -148,6 +156,17 @@
             <i class="fa fa-caret-down fa-lg"></i>
           </div>
         </li>
+      </ul>
+      <hr>
+      <ul class="settings">
+        <li>
+          <div class="button">
+            <a href="#/log">Show Log</a>
+          </div>
+        </li>
+      </ul>
+      <hr>
+      <ul class="settings">
         <li>
           <div class="button">
             <a href="javascript:saveSettings()">Save Settings</a>

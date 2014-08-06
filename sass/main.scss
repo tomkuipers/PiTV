@@ -192,6 +192,19 @@ article {
     width: 100%;
     padding: em(20);
 
+    .log {
+      @include user-select(text);
+      padding: 0;
+
+      li {
+        width: 100%;
+        min-width: 100%;
+        padding: em(5) 0;
+        font-size: 12px;
+        font-family: $helvetica;
+      }
+    }
+
     .settings {
       padding: 0;
 
@@ -204,7 +217,6 @@ article {
 
         h4 {
           float: left;
-          height: 100%;
           min-height: 100%;
           line-height: 58px;
           vertical-align: middle;
@@ -414,14 +426,17 @@ article {
         padding: em(30);
 
         h1 {
+          @include user-select(text);
           text-align: left;
         }
 
         p {
+          @include user-select(text);
           text-align: justify;
         }
 
         .buttons {
+          @include user-select(none);
           a {
             display: block;
             width: 100%;
@@ -447,7 +462,7 @@ article {
     }
   }
 
-  ul {
+  ul.cards {
     @include outer-container;
     width: 100%;
     min-width: 100%;
@@ -629,6 +644,24 @@ section {
   right: 0;
   top: 0;
   bottom: 0;
+
+  h1 {
+    width: 100%;
+    min-width: 100%;
+    height: 80px;
+    min-height: 80px;
+    margin-top: -40px;
+    vertical-align: middle;
+    line-height: 80px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 50%;
+    text-align: center;
+    color: #fff;
+    font-family: 'Montserrat', $helvetica;
+    font-size: em(32);
+  }
 
   .logo {
     width: em(500);
