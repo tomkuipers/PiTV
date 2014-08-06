@@ -70,12 +70,6 @@
 
   server.listen(80);
 
-  store.get('log', function(err, val) {
-    if (err == null) {
-      return log = val;
-    }
-  });
-
   store.get('settings', function(err, val) {
     if ((err != null) || (val == null)) {
       return store.set('settings', settings, function(err) {
@@ -152,9 +146,7 @@
       type: type,
       msg: msg
     });
-    return store.set('log', log, function(err) {
-      return console.log(time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg);
-    });
+    return console.log(time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg);
   };
 
   convertLanguageCode = function(input) {

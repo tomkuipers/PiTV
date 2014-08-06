@@ -36,10 +36,6 @@ logType =
 
 server.listen 80
 
-store.get 'log', (err, val) ->
-  if !err?
-    log = val
-
 store.get 'settings', (err, val) ->
   if err? or !val?
     store.set 'settings', settings, (err) ->
@@ -87,8 +83,7 @@ saveLogEntry = (type, msg) ->
     time: timestamp
     type: type
     msg: msg
-  store.set 'log', log, (err) ->
-    console.log time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg
+  console.log time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg
 
 convertLanguageCode = (input) ->
   switch input
