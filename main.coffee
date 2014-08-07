@@ -83,6 +83,8 @@ saveLogEntry = (type, msg) ->
     time: timestamp
     type: type
     msg: msg
+  if type is 2
+    remote.emit 'alert', msg
   console.log time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg
 
 convertLanguageCode = (input) ->
@@ -510,7 +512,7 @@ remote.on 'connection', (socket) ->
                           omx.player.start options
                         else
                           saveLogEntry 1, 'Getting subtitles was unsuccessful!'
-                          remote.emit 'error', "No subtitles found! Playing without..."
+                          remote.emit 'alert', "No subtitles found! Playing without..."
                           omx.player.start options
             else if subtitleSetting? and subtitleSetting.length > 0 and data.episode?
               filenameReg = /.+&dn=([\w\.-]+)&tr=.+/ig
@@ -532,7 +534,7 @@ remote.on 'connection', (socket) ->
                       omx.player.start options
                     else
                       saveLogEntry 1, 'No subtitles found.'
-                      remote.emit 'error', "No subtitles found! Playing without..."
+                      remote.emit 'alert', "No subtitles found! Playing without..."
                       omx.player.start options
             else
               omx.player.start options

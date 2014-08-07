@@ -1,11 +1,11 @@
 {
   "name": "PiTV",
   "description": "Make your TV a smarter TV - with torrenting!",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "homepage": "http://pitv.pw",
   "private": false,
   "dependencies": {
-    "express": "~4.2.0",
+    "express": "*",
     "body-parser": "*",
     "method-override": "*",
     "ejs": "*",
