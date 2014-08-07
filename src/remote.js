@@ -614,7 +614,7 @@ socket.on('statePlaying', function(title) {
 socket.on('stateStop', function() {
   $('#media-title').html('');
 });
-socket.on('error', function(msg) {
+socket.on('alert', function(msg) {
   console.log('Error: ' + msg);
   throwAlert(msg);
 });

@@ -146,6 +146,9 @@
       type: type,
       msg: msg
     });
+    if (type === 2) {
+      remote.emit('alert', msg);
+    }
     return console.log(time.toLocaleDateString() + ' ' + time.toLocaleTimeString() + ' [' + logType[type] + '] ' + msg);
   };
 
@@ -764,7 +767,7 @@
                             return omx.player.start(options);
                           } else {
                             saveLogEntry(1, 'Getting subtitles was unsuccessful!');
-                            remote.emit('error', "No subtitles found! Playing without...");
+                            remote.emit('alert', "No subtitles found! Playing without...");
                             return omx.player.start(options);
                           }
                         });
@@ -795,7 +798,7 @@
                         return omx.player.start(options);
                       } else {
                         saveLogEntry(1, 'No subtitles found.');
-                        remote.emit('error', "No subtitles found! Playing without...");
+                        remote.emit('alert', "No subtitles found! Playing without...");
                         return omx.player.start(options);
                       }
                     });
