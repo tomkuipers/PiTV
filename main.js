@@ -881,9 +881,19 @@
         return saveLogEntry(0, 'Emitted power off command.');
       });
     });
-    return socket.on('reboot', function(data, fn) {
+    socket.on('reboot', function(data, fn) {
       return childProcess.exec('reboot', function(error, stdout, stderr) {
         return saveLogEntry(0, 'Emitted reboot command.');
+      });
+    });
+    socket.on('turnDisplayOn', function(val, fn) {
+      return childProcess.exec('sh /etc/turnonscreen', function(error, stdout, stderr) {
+        return saveLogEntry(0, 'Turned display off.');
+      });
+    });
+    return socket.on('turnDisplayOff', function(val, fn) {
+      return childProcess.exec('tvservice -o', function(error, stdout, stderr) {
+        return saveLogEntry(0, 'Turned display off.');
       });
     });
   });

@@ -588,6 +588,12 @@ remote.on 'connection', (socket) ->
   socket.on 'reboot', (data, fn) ->
     childProcess.exec 'reboot', (error, stdout, stderr) ->
       saveLogEntry 0, 'Emitted reboot command.'
+  socket.on 'turnDisplayOn', (val, fn) ->
+    childProcess.exec 'sh /etc/turnonscreen', (error, stdout, stderr) ->
+      saveLogEntry 0, 'Turned display off.'
+  socket.on 'turnDisplayOff', (val, fn) ->
+    childProcess.exec 'tvservice -o', (error, stdout, stderr) ->
+      saveLogEntry 0, 'Turned display off.'
 
 omx.emitter.on 'stop', ->
   childProcess.exec 'xrefresh -display :0', (error, stdout, stderr) ->
