@@ -416,6 +416,14 @@ function saveSettings() {
   });
 }
 
+function turnDisplayOff() {
+  socket.emit('turnDisplayOff');
+}
+
+function turnDisplayOn() {
+  socket.emit('turnDisplayOn');
+}
+
 function shutdown() {
   socket.emit('shutdown');
 }
