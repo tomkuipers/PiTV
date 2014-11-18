@@ -59,7 +59,7 @@ omx.start = function(fn) {
         console.info(fn);
         var insert = '';
         if (fn.subtitle != null) {
-            insert = ' --subtitles "' + fn.subtitle + '"';
+            insert = ' --align center --no-ghost-box --subtitles "' + fn.subtitle + '"';
         }
         exec('omxplayer -o hdmi --blank' + insert + ' "' + fn.input + '" < ' + pipe, function (error, stdout, stderr) {
             if (error !== null) {
